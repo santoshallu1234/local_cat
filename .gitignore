@@ -1,0 +1,63 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+.npm/
+.npmrc
+
+# Uploads directory (contains temporary files)
+uploads/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Log files
+*.log
+logs/
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Icon?
+*.icon?
+Desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/
+out/
+
+# Extension files
+*.crx
+*.zip
+
+# Temporary files
+tmp/
+temp/
+
+# Chrome extension development
+*.pem
+
+# Screenshots (if any)
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Test files
+*.test.js
+*.spec.js

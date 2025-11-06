@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "AI Auto Marker",
+  "version": "1.0",
+  "description": "Capture webpage images and send them to the backend for AI processing.",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "clipboardWrite",
+    "omnibox"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "commands": {
+    "capture-page": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U"
+      },
+      "description": "Capture and analyze current page"
+    }
+  },
+  "icons": {
+    "16": "icon.svg",
+    "48": "icon.svg",
+    "128": "icon.svg"
+  },
+  "omnibox": {
+    "keyword": "aimarker"
+  }
+}
