@@ -22,6 +22,23 @@ const model = new ChatGroq({
   apiKey: process.env.GROQ_API_KEY || "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",
 });
 
+// Function to create Tesseract worker with environment-specific config
+const createTesseractWorker = async () => {
+  // For Vercel deployment, use CDN paths to avoid file system issues
+  // For local development, use default configuration
+  const isVercel = !!process.env.VERCEL;
+  
+  if (isVercel) {
+    return await createWorker('eng', 1, {
+      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
+    });
+  } else {
+    return await createWorker('eng');
+  }
+};
+
 // Endpoint to handle base64 image data directly (no file system operations)
 app.post('/solve-mcqs-base64', async (req, res) => {
   try {
@@ -47,12 +64,7 @@ app.post('/solve-mcqs-base64', async (req, res) => {
     const imageBuffer = Buffer.from(base64Data, 'base64');
     
     // Extract text from the image buffer using Tesseract.js
-    // Configure Tesseract.js for Vercel environment
-    const worker = await createWorker('eng', 1, {
-      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
-    });
+    const worker = await createTesseractWorker();
     
     const { data: { text } } = await worker.recognize(imageBuffer);
     await worker.terminate();

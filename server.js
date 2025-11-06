@@ -59,6 +59,23 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(uploadDir)); // Serve uploaded files
 
+// Function to create Tesseract worker with environment-specific config
+const createTesseractWorker = async () => {
+  // For Vercel deployment, use CDN paths to avoid file system issues
+  // For local development, use default configuration
+  const isVercel = !!process.env.VERCEL;
+  
+  if (isVercel) {
+    return await createWorker('eng', 1, {
+      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
+    });
+  } else {
+    return await createWorker('eng');
+  }
+};
+
 // Route to handle screenshot file uploads
 app.post('/solve-mcqs', upload.single('screenshot'), async (req, res) => {
   try {
@@ -68,12 +85,7 @@ app.post('/solve-mcqs', upload.single('screenshot'), async (req, res) => {
     }
     
     // Extract text from the image using Tesseract.js
-    // Configure Tesseract.js for better compatibility
-    const worker = await createWorker('eng', 1, {
-      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
-    });
+    const worker = await createTesseractWorker();
     
     const { data: { text } } = await worker.recognize(req.file.path);
     await worker.terminate();
@@ -157,12 +169,7 @@ app.post('/solve-mcqs-base64', async (req, res) => {
     const imageBuffer = Buffer.from(base64Data, 'base64');
     
     // Extract text from the image buffer using Tesseract.js
-    // Configure Tesseract.js for better compatibility
-    const worker = await createWorker('eng', 1, {
-      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
-    });
+    const worker = await createTesseractWorker();
     
     const { data: { text } } = await worker.recognize(imageBuffer);
     await worker.terminate();
