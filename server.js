@@ -61,15 +61,15 @@ app.use('/uploads', express.static(uploadDir)); // Serve uploaded files
 
 // Function to create Tesseract worker with environment-specific config
 const createTesseractWorker = async () => {
-  // For Vercel deployment, use CDN paths to avoid file system issues
+  // For Vercel deployment, use simplified configuration
   // For local development, use default configuration
   const isVercel = !!process.env.VERCEL;
   
   if (isVercel) {
+    // Use minimal configuration for Vercel to avoid path issues
     return await createWorker('eng', 1, {
-      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
+      cacheMethod: 'none',
+      workerBlobURL: false,
     });
   } else {
     return await createWorker('eng');

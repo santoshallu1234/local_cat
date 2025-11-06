@@ -61,3 +61,4 @@ screenshots/
 # Test files
 *.test.js
 *.spec.js
+.vercel
