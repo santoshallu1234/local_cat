@@ -139,10 +139,6 @@ app.post('/solve-mcqs-base64', async (req, res) => {
       });
     }
     
-    // Generate a unique filename
-    const filename = `screenshot-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
-    const filePath = path.join(uploadDir, filename);
-    
     // If image is already a data URL, extract the base64 data
     // Otherwise, assume it's base64 data
     let base64Data;
@@ -152,25 +148,20 @@ app.post('/solve-mcqs-base64', async (req, res) => {
       base64Data = image;
     }
     
-    // Save the image file
-    fs.writeFileSync(filePath, base64Data, "base64");
+    // Convert base64 to buffer (no file saving needed)
+    const imageBuffer = Buffer.from(base64Data, 'base64');
     
-    // Extract text from the image using Tesseract.js
+    // Extract text from the image buffer using Tesseract.js
     const worker = await createWorker('eng');
     
-    const { data: { text } } = await worker.recognize(filePath);
+    const { data: { text } } = await worker.recognize(imageBuffer);
     await worker.terminate();
-    
-    // Save the extracted text to a file
-    // const textFilename = filename.replace(path.extname(filename), '.txt');
-    // const textFilePath = path.join(uploadDir, textFilename);
-    // fs.writeFileSync(textFilePath, text);
     
     // Use AI to find and answer MCQ questions if any
     let aiAnswers = null;
     try {
       const response = await model.invoke([
-        ["system", "You are an AI assistant that finds MCQ questions, programming questions, or other academic questions in text and provides detailed answers. For programming questions, provide complete code solutions with explanations. For MCQ questions, provide ONLY the answers  without any explanations or theory. For other questions, provide concise and accurate answers. If no relevant questions are found, respond with 'No relevant questions found.'"],
+        ["system", "You are an AI assistant that finds MCQ questions, programming questions, or other academic questions in text and provides detailed answers. For programming questions, provide complete code solutions with explanations. For MCQ questions, provide ONLY the answers without any explanations or theory. For other questions, provide concise and accurate answers. If no relevant questions are found, respond with 'No relevant questions found.'"],
         ["user", text]
       ]);
       
@@ -185,32 +176,22 @@ app.post('/solve-mcqs-base64', async (req, res) => {
     // Prepare the response
     const responseJson = {
       success: true,
-      message: 'File saved and text extracted successfully',
-      fileId: filename,
-      filePath: filePath,
+      message: 'Text extracted successfully from base64 image',
       extractedText: text,
       aiAnswers: aiAnswers
     };
     
-    console.log("Received and saved base64 image data");
+    console.log("Processed base64 image data");
     console.log(aiAnswers)
     
     // Send the response
     res.json(responseJson);
     
-    // Delete the uploaded image file after sending the response
-    try {
-      fs.unlinkSync(filePath);
-      console.log('Deleted uploaded image file:', filePath);
-    } catch (deleteError) {
-      console.error('Error deleting image file:', deleteError);
-    }   
-    
   } catch (error) {
-    console.error('Error saving base64 image:', error);
+    console.error('Error processing base64 image:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to save base64 image',
+      error: 'Failed to process base64 image',
       details: error.message 
     });
   }

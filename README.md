@@ -102,6 +102,31 @@ Open `client-example.html` in a web browser to test the server with sample HTML 
 
 This server can be integrated with the AI Auto MCQ Marker Chrome extension to provide server-side processing capabilities.
 
+## Deployment
+
+### Render Deployment (Recommended)
+
+See [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) for detailed Render deployment instructions.
+
+### Vercel Deployment
+
+This project can also be deployed to Vercel, but with some limitations:
+
+1. File system operations are not supported on Vercel
+2. Only the `/solve-mcqs-base64` endpoint is available
+3. The `/solve-mcqs` endpoint that requires file uploads will not work
+
+To deploy to Vercel:
+
+1. Create a new project on Vercel
+2. Connect your Git repository
+3. Set the environment variables in Vercel dashboard:
+   - `GROQ_API_KEY` - Your Groq API key
+4. Deploy!
+
+The API will be available at:
+- `POST /solve-mcqs-base64` - Process base64 encoded images
+
 ## License
 
 MIT
