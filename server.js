@@ -12,7 +12,6 @@ import { PromptTemplate } from "@langchain/core/prompts";
 // Load environment variables
 dotenv.config();
 
-
 const model = new ChatGroq({
   model: "llama-3.3-70b-versatile",  // "openai/gpt-oss-20b", //" // Updated to a newer model
   temperature: 0.7,
@@ -27,7 +26,8 @@ const promptTemplate = new PromptTemplate({
 // Create upload directory if it doesn't exist
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadDir = path.join(__dirname, 'uploads');
+// Use RENDER_UPLOAD_DIR environment variable if set, otherwise default to 'uploads'
+const uploadDir = process.env.RENDER_UPLOAD_DIR || path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -60,8 +60,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(uploadDir)); // Serve uploaded files
 
 // Route to handle screenshot file uploads
-//upload.single('screenshot'),
-app.post('/solve-mcqs',  async (req, res) => {
+app.post('/solve-mcqs', upload.single('screenshot'), async (req, res) => {
   try {
     // Check if file was uploaded
     if (!req.file) {
