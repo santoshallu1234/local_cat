@@ -87,6 +87,21 @@
       border-bottom: 1px solid #ddd;
       font-weight: bold;
       font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #copyBtn {
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    #copyBtn:hover {
+      background: #3367d6;
     }
     #extractedText {
       flex: 1;
@@ -125,12 +140,15 @@
     <div id="content">
       <div id="status"></div>
       <div id="textContainer">
-        <div id="textHeader">Results</div>
+        <div id="textHeader">
+          <div>Results</div>
+          <button id="copyBtn">Copy</button>
+        </div>
         <div id="extractedText">Processing... Please wait while we analyze the page.</div>
       </div>
     </div>
     <div id="footer">
-      <div id="copyStatus">Answers copied to clipboard</div>
+      <div id="copyStatus">Response displayed</div>
       <div>Press Ctrl+Shift+U to analyze</div>
     </div>
   </div>
