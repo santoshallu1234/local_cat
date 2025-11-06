@@ -68,7 +68,12 @@ app.post('/solve-mcqs', upload.single('screenshot'), async (req, res) => {
     }
     
     // Extract text from the image using Tesseract.js
-    const worker = await createWorker('eng');
+    // Configure Tesseract.js for better compatibility
+    const worker = await createWorker('eng', 1, {
+      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
+    });
     
     const { data: { text } } = await worker.recognize(req.file.path);
     await worker.terminate();
@@ -152,7 +157,12 @@ app.post('/solve-mcqs-base64', async (req, res) => {
     const imageBuffer = Buffer.from(base64Data, 'base64');
     
     // Extract text from the image buffer using Tesseract.js
-    const worker = await createWorker('eng');
+    // Configure Tesseract.js for better compatibility
+    const worker = await createWorker('eng', 1, {
+      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
+    });
     
     const { data: { text } } = await worker.recognize(imageBuffer);
     await worker.terminate();

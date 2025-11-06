@@ -47,7 +47,12 @@ app.post('/solve-mcqs-base64', async (req, res) => {
     const imageBuffer = Buffer.from(base64Data, 'base64');
     
     // Extract text from the image buffer using Tesseract.js
-    const worker = await createWorker('eng');
+    // Configure Tesseract.js for Vercel environment
+    const worker = await createWorker('eng', 1, {
+      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
+    });
     
     const { data: { text } } = await worker.recognize(imageBuffer);
     await worker.terminate();
