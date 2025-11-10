@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const model = new ChatGroq({
   model: "llama-3.3-70b-versatile",
   temperature: 0.7,
-  apiKey: process.env.GROQ_API_KEY || "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",
+  apiKey: process.env.GROQ_API_KEY, // Use environment variable only
 });
 
 // Function to create Tesseract worker with environment-specific config
