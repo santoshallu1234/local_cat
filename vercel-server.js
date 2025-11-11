@@ -85,7 +85,7 @@ app.post('/solve-mcqs-base64', async (req, res) => {
       console.error('AI processing error:', aiError);
       aiAnswers = "AI processing failed: " + aiError.message;
     }
-    console.log(text);
+    console.log(aiAnswers);
     // Prepare the response
     const responseJson = {
       success: true,
