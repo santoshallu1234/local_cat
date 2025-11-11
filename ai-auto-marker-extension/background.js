@@ -243,7 +243,7 @@ function showResponseInPopup(responseText) {
           height: 100,
           left: workArea.left + 30, // 10 pixels from the left edge
           top: workArea.top + workArea.height - 100, // Exactly at the bottom (height = 200)
-          focused: true
+          //focused: true
         };
         
         createPopupWindow(responseText, windowOptions);
