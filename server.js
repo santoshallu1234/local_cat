@@ -75,6 +75,9 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(uploadDir)); // Serve uploaded files
+app.use('/marketing', express.static(path.join(__dirname, 'marketing'))); // Serve marketing pages
+app.use('/fonts', express.static(path.join(__dirname, 'fonts'))); // Serve fonts
+app.use('/', express.static(path.join(__dirname, 'marketing'))); // Serve marketing pages as homepage
 
 // Route to handle screenshot file uploads
 //upload.single('screenshot'),
@@ -235,14 +238,7 @@ app.post('/solve-mcqs-base64', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'MCQ Screenshot Server is running',
-    endpoints: {
-      'POST /solve-mcqs': 'Submit screenshot to save and extract text',
-      'POST /solve-mcqs-base64': 'Submit base64 image data to save and extract text',
-      'GET /uploads/:filename': 'Access uploaded files'
-    }
-  });
+  res.sendFile(path.join(__dirname, 'marketing', 'index.html'));
 });
 
 app.listen(port, () => {
