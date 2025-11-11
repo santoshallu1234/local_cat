@@ -109,12 +109,7 @@ app.post('/solve-mcqs-base64', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'MCQ Screenshot Server is running on Vercel',
-    endpoints: {
-      'POST /solve-mcqs-base64': 'Submit base64 image data to extract text and solve MCQs'
-    }
-  });
+  res.sendFile(path.join(__dirname, 'marketing', 'index.html'));
 });
 
 // Vercel serverless function handler
