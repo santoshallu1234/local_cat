@@ -17,11 +17,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Initialize the model
 const model = new ChatGroq({
-  model: "llama-3.3-70b-versatile",
+  model: "openai/gpt-oss-20b",
   temperature: 0.7,
   apiKey: process.env.GROQ_API_KEY, // Use environment variable only
 });
 
+//hello just for fun 
 // Function to create Tesseract worker with environment-specific config
 const createTesseractWorker = async () => {
   // For Vercel deployment, use simplified configuration

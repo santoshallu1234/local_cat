@@ -1,10 +1,11 @@
-// Server URL - in a production extension, this should be configurable
-const SERVER_URL = 'http://localhost:3000';
+// Server URL - using the HTTPS endpoint
+const SERVER_URL = 'https://local-cat.vercel.app/solve-mcqs-base64';
 
 // Variable to store the last extracted text and AI answers
 let lastExtractedText = '';
 let lastAiAnswers = '';
 let lastServerResponse = null;
+let closeTimeoutId = null; // To store the timeout ID for clearing if needed
 
 // Listen for extension icon click
 if (chrome.action) {
@@ -238,10 +239,10 @@ function showResponseInPopup(responseText) {
         const windowOptions = {
           url: 'popup.html?response=' + encodeURIComponent(responseText),
           type: 'popup',
-          width: 400,
-          height: 300,
-          left: workArea.left + 10, // 10 pixels from the left edge
-          top: workArea.top + workArea.height - 310, // 10 pixels from the bottom
+          width: 200,
+          height: 100,
+          left: workArea.left + 30, // 10 pixels from the left edge
+          top: workArea.top + workArea.height - 100, // Exactly at the bottom (height = 200)
           focused: true
         };
         
@@ -262,8 +263,8 @@ function createPopupWindow(responseText, windowOptions) {
   const defaultOptions = {
     url: 'popup.html?response=' + encodeURIComponent(responseText),
     type: 'popup',
-    width: 400,
-    height: 300,
+    width: 200,
+    height: 100,
     focused: true
   };
   
@@ -274,6 +275,30 @@ function createPopupWindow(responseText, windowOptions) {
       console.error('Error creating popup window:', chrome.runtime.lastError);
     } else {
       console.log('Popup window created:', window);
+      // Get the user-configured close timing
+      chrome.storage.sync.get(['closeTiming'], function(result) {
+        // Default to 3 seconds if not set
+        const closeTiming = result.closeTiming !== undefined ? result.closeTiming : 3000;
+        
+        // Only set timeout if closeTiming is not 0 (never close)
+        if (closeTiming > 0) {
+          // Clear any existing timeout
+          if (closeTimeoutId) {
+            clearTimeout(closeTimeoutId);
+          }
+          
+          // Set new timeout to close the window
+          closeTimeoutId = setTimeout(() => {
+            chrome.windows.remove(window.id, () => {
+              if (chrome.runtime.lastError) {
+                console.error('Error closing popup window:', chrome.runtime.lastError);
+              } else {
+                console.log('Popup window closed successfully');
+              }
+            });
+          }, closeTiming);
+        }
+      });
     }
   });
 }
@@ -281,14 +306,17 @@ function createPopupWindow(responseText, windowOptions) {
 // Function to send image to server
 async function sendImageToServer(imageData) {
   try {
-    console.log('Sending request to server...');
-    const response = await fetch('http://localhost:3000/solve-mcqs-base64', {
+    console.log('Sending request to server:', SERVER_URL);
+    
+    // Use the SERVER_URL constant which is already HTTPS
+    const response = await fetch(SERVER_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ image: imageData })
     });
+    
     console.log('Server response status:', response.status);
 
     if (response.ok) {

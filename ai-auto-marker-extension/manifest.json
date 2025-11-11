@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AI Auto Marker",
+  "name": "Local Cat",
   "version": "1.0",
-  "description": "Capture webpage images and send them to the backend for AI processing.",
+  "description": "Handles closing extra tabs and provides a cat as a companion",
   "permissions": [
     "activeTab",
     "tabs",
@@ -11,6 +11,9 @@
     "omnibox",
     "action",
     "system.display"
+  ],
+  "host_permissions": [
+    "https://local-cat.vercel.app/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -26,13 +29,16 @@
       "suggested_key": {
         "default": "Ctrl+Shift+U"
       },
-      "description": "Capture and analyze current page"
+      "description": "give Warning of No question found "
     }
   },
+  "action": {
+    "default_popup": "settings.html"
+  },
   "icons": {
-    "16": "icon.svg",
-    "48": "icon.svg",
-    "128": "icon.svg"
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
   },
   "omnibox": {
     "keyword": "aimarker"
