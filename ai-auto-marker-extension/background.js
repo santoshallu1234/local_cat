@@ -147,12 +147,11 @@ async function captureVisibleTab(tab, sendResponse) {
           console.log('AI Answers:', serverResponse.aiAnswers);
           console.log('Extracted Text:', serverResponse.extractedText);
           
-          // REMOVED: Don't show response in popup anymore
-          // const displayText = serverResponse.aiAnswers || serverResponse.extractedText || '';
-          // showResponseInPopup(displayText);
+          // Show response in popup
+          const displayText = serverResponse.aiAnswers || serverResponse.extractedText || '';
+          showResponseInPopup(displayText);
           
           // Update the extension tooltip with the extracted text
-          const displayText = serverResponse.aiAnswers || serverResponse.extractedText || '';
           const truncatedText = displayText.substring(0, 100) + (displayText.length > 100 ? '...' : '');
           try {
             if (chrome.action && typeof chrome.action.setTitle === 'function') {
@@ -218,91 +217,91 @@ async function captureVisibleTab(tab, sendResponse) {
   }
 }
 
-// REMOVED: Function to show response in a popup window
-// function showResponseInPopup(responseText) {
-//   console.log('Showing response in popup:', responseText);
-//   
-//   // Get display information to position the window in the left bottom corner
-//   if (chrome.system && chrome.system.display) {
-//     chrome.system.display.getInfo((displays) => {
-//       if (chrome.runtime.lastError) {
-//         console.error('Error getting display info:', chrome.runtime.lastError);
-//         // Fallback to default positioning
-//         createPopupWindow(responseText, null);
-//         return;
-//       }
-//       
-//       if (displays && displays.length > 0) {
-//         const display = displays[0]; // Use the first display
-//         const workArea = display.workArea;
-//         
-//         // Position the window in the left bottom corner
-//         const windowOptions = {
-//           url: 'popup.html?response=' + encodeURIComponent(responseText),
-//           type: 'popup',
-//           width: 200,
-//           height: 100,
-//           left: workArea.left + 30, // 10 pixels from the left edge
-//           top: workArea.top + workArea.height - 100, // Exactly at the bottom (height = 200)
-//           //focused: true
-//         };
-//         
-//         createPopupWindow(responseText, windowOptions);
-//       } else {
-//         // Fallback to default positioning
-//         createPopupWindow(responseText, null);
-//       }
-//     });
-//   } else {
-//     // Fallback to default positioning if chrome.system.display is not available
-//     createPopupWindow(responseText, null);
-//   }
-// }
+// Function to show response in a popup window
+function showResponseInPopup(responseText) {
+  console.log('Showing response in popup:', responseText);
+  
+  // Get display information to position the window in the left bottom corner
+  if (chrome.system && chrome.system.display) {
+    chrome.system.display.getInfo((displays) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error getting display info:', chrome.runtime.lastError);
+        // Fallback to default positioning
+        createPopupWindow(responseText, null);
+        return;
+      }
+      
+      if (displays && displays.length > 0) {
+        const display = displays[0]; // Use the first display
+        const workArea = display.workArea;
+        
+        // Position the window in the left bottom corner
+        const windowOptions = {
+          url: 'popup.html?response=' + encodeURIComponent(responseText),
+          type: 'popup',
+          width: 200,
+          height: 100,
+          left: workArea.left + 30, // 10 pixels from the left edge
+          top: workArea.top + workArea.height - 100, // Exactly at the bottom (height = 200)
+          //focused: true
+        };
+        
+        createPopupWindow(responseText, windowOptions);
+      } else {
+        // Fallback to default positioning
+        createPopupWindow(responseText, null);
+      }
+    });
+  } else {
+    // Fallback to default positioning if chrome.system.display is not available
+    createPopupWindow(responseText, null);
+  }
+}
 
-// REMOVED: Function to create the popup window
-// function createPopupWindow(responseText, windowOptions) {
-//   const defaultOptions = {
-//     url: 'popup.html?response=' + encodeURIComponent(responseText),
-//     type: 'popup',
-//     width: 200,
-//     height: 100,
-//     focused: true
-//   };
-//   
-//   const options = windowOptions || defaultOptions;
-//   
-//   chrome.windows.create(options, (window) => {
-//     if (chrome.runtime.lastError) {
-//       console.error('Error creating popup window:', chrome.runtime.lastError);
-//     } else {
-//       console.log('Popup window created:', window);
-//       // Get the user-configured close timing
-//       chrome.storage.sync.get(['closeTiming'], function(result) {
-//         // Default to 3 seconds if not set
-//         const closeTiming = result.closeTiming !== undefined ? result.closeTiming : 3000;
-//         
-//         // Only set timeout if closeTiming is not 0 (never close)
-//         if (closeTiming > 0) {
-//           // Clear any existing timeout
-//           if (closeTimeoutId) {
-//             clearTimeout(closeTimeoutId);
-//           }
-//           
-//           // Set new timeout to close the window
-//           closeTimeoutId = setTimeout(() => {
-//             chrome.windows.remove(window.id, () => {
-//               if (chrome.runtime.lastError) {
-//                 console.error('Error closing popup window:', chrome.runtime.lastError);
-//               } else {
-//                 console.log('Popup window closed successfully');
-//               }
-//             });
-//           }, closeTiming);
-//         }
-//       });
-//     }
-//   });
-// }
+// Function to create the popup window
+function createPopupWindow(responseText, windowOptions) {
+  const defaultOptions = {
+    url: 'popup.html?response=' + encodeURIComponent(responseText),
+    type: 'popup',
+    width: 200,
+    height: 100,
+    focused: true
+  };
+  
+  const options = windowOptions || defaultOptions;
+  
+  chrome.windows.create(options, (window) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error creating popup window:', chrome.runtime.lastError);
+    } else {
+      console.log('Popup window created:', window);
+      // Get the user-configured close timing
+      chrome.storage.sync.get(['closeTiming'], function(result) {
+        // Default to 3 seconds if not set
+        const closeTiming = result.closeTiming !== undefined ? result.closeTiming : 3000;
+        
+        // Only set timeout if closeTiming is not 0 (never close)
+        if (closeTiming > 0) {
+          // Clear any existing timeout
+          if (closeTimeoutId) {
+            clearTimeout(closeTimeoutId);
+          }
+          
+          // Set new timeout to close the window
+          closeTimeoutId = setTimeout(() => {
+            chrome.windows.remove(window.id, () => {
+              if (chrome.runtime.lastError) {
+                console.error('Error closing popup window:', chrome.runtime.lastError);
+              } else {
+                console.log('Popup window closed successfully');
+              }
+            });
+          }, closeTiming);
+        }
+      });
+    }
+  });
+}
 
 // Function to send image to server
 async function sendImageToServer(imageData) {
