@@ -25,10 +25,15 @@
     </header>
 
     <section class="hero">
-        <video id="heroBackgroundVideo" class="hero-background-video" autoplay muted>
-            <source src="./mainv.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
+        <iframe id="heroBackgroundVideo"
+  src="https://player.cloudinary.com/embed/?cloud_name=dh6fd0law&public_id=mainv_t95p0m&profile=cld-default&autoplay=true&controls=false"
+  width="640"
+  height="360" 
+  style="height: auto; width: 100%; aspect-ratio: 640 / 360;"
+  allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+  allowfullscreen
+  frameborder="0"
+></iframe>
         <div class="hero-completion-message">
             <h1>AI-Powered Solver for Chrome</h1>
         </div>
@@ -278,45 +283,37 @@
 
     <script src="script.js"></script>
     <script>
-        // Play video only once without reverse or looping
-        const video = document.getElementById('heroBackgroundVideo');
+        // Handle iframe loading and completion
+        const iframe = document.getElementById('heroBackgroundVideo');
         
-        video.addEventListener('loadeddata', function() {
-            // Set up the video to play forward once
-            video.playbackRate = 1;
-            // Disable looping
-            video.loop = false;
-        });
-        
-        // Handle potential errors
-        video.addEventListener('error', function() {
-            console.log('Video error');
-        });
-        
-        // Show completion message after video completes
-        video.addEventListener('ended', function() {
-            const completionMessage = document.querySelector('.hero-completion-message');
-            const downloadSection = document.querySelector('.hero-download-section');
-            const heading = document.querySelector('.hero-completion-message h1');
-            
-            if (completionMessage) {
-                // Show the completion message
-                completionMessage.classList.add('show');
+        // Since we can't directly listen to iframe events, we'll use a timer-based approach
+        // to show the completion message after a reasonable time
+        window.addEventListener('load', function() {
+            // Show completion message after 5 seconds (half of the 10-second video)
+            setTimeout(function() {
+                const completionMessage = document.querySelector('.hero-completion-message');
+                const downloadSection = document.querySelector('.hero-download-section');
+                const heading = document.querySelector('.hero-completion-message h1');
                 
-                // After 1.5 seconds, flip the heading and show download section
-                setTimeout(function() {
-                    if (heading) {
-                        heading.classList.add('flip');
-                    }
+                if (completionMessage) {
+                    // Show the completion message
+                    completionMessage.classList.add('show');
                     
-                    // After flip animation completes, show download section
+                    // After 1.5 seconds, flip the heading and show download section
                     setTimeout(function() {
-                        if (downloadSection) {
-                            downloadSection.classList.add('show');
+                        if (heading) {
+                            heading.classList.add('flip');
                         }
+                        
+                        // After flip animation completes, show download section
+                        setTimeout(function() {
+                            if (downloadSection) {
+                                downloadSection.classList.add('show');
+                            }
+                        }, 1500);
                     }, 1500);
-                }, 1500);
-            }
+                }
+            }, 5000); // 5 seconds (half of video duration)
         });
     </script>
     
