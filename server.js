@@ -14,7 +14,7 @@ dotenv.config();
 
 
 const model = new ChatGroq({
-  model: "llama-3.3-70b-versatile",  // "openai/gpt-oss-20b", //" // Updated to a newer model
+  model: "openai/gpt-oss-20b", //"llama-3.3-70b-versatile",  // "openai/gpt-oss-20b", //" // Updated to a newer model
   temperature: 0.7,
   apiKey: process.env.GROQ_API_KEY, // Use environment variable only
 });
