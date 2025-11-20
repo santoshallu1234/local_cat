@@ -7,8 +7,6 @@
     "activeTab",
     "tabs",
     "storage",
-    "scripting",
-    "omnibox",
     "action",
     "system.display"
   ],
@@ -39,8 +37,5 @@
     "16": "icon.png",
     "48": "icon.png",
     "128": "icon.png"
-  },
-  "omnibox": {
-    "keyword": "aimarker"
   }
 }

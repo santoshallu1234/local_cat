@@ -15,6 +15,13 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve index.html explicitly
+app.get('/', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'marketing', 'index.html'));
+});
+
+// Static file serving
 app.use('/', express.static(path.join(process.cwd(), 'marketing')));
 app.use('/fonts', express.static(path.join(process.cwd(), 'fonts')));
 
@@ -110,8 +117,9 @@ app.post('/solve-mcqs-base64', async (req, res) => {
   }
 });
 
+// Serve index.html explicitly (moved before static middleware to ensure proper routing)
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'marketing', 'index.html'));
+  res.sendFile(path.join(process.cwd(), 'marketing', 'index.html'));
 });
 
 // Vercel serverless function handler
