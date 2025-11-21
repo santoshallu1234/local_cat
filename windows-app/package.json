@@ -1,0 +1,26 @@
+{
+  "name": "ai-auto-marker-windows",
+  "version": "1.0.0",
+  "description": "Windows application version of the AI Auto Marker Chrome extension",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "screenshot-desktop": "^1.12.7"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "keywords": [
+    "ai",
+    "mcq",
+    "screenshot",
+    "ocr"
+  ],
+  "author": "AI Auto Marker Team",
+  "license": "MIT"
+}

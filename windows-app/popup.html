@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      min-height: 150px;
+      max-height: 200px;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #ffffff;
+      color: #333333;
+      overflow: hidden;
+    }
+    #container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+    }
+    #header {
+      padding: 5px 10px;
+      background-color: #4285f4;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    #closeBtn {
+      background: none;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      color: white;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #closeBtn:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+    }
+    #content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      overflow: hidden;
+    }
+    #status {
+      display: none;
+      padding: 5px;
+      text-align: center;
+      font-size: 11px;
+      border-radius: 3px;
+      margin-bottom: 5px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .info {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+    #textContainer {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #textHeader {
+      padding: 5px 8px;
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+      font-size: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #copyBtn {
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 5px;
+      cursor: pointer;
+    }
+    #copyBtn:hover {
+      background: #3367d6;
+    }
+    #extractedText {
+      flex: 1;
+      padding: 8px;
+      overflow-x: auto; /* Enable horizontal scrolling */
+      overflow-y: auto; /* Keep vertical scrolling */
+      font-size: 12px;
+      white-space: pre; /* Preserve whitespace and allow horizontal scrolling */
+      word-break: keep-all; /* Prevent word breaking to allow horizontal scrolling */
+      background-color: #ffffff;
+      line-height: 1.4;
+      max-height: 120px;
+    }
+    #footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 10px;
+      background-color: #f8f9fa;
+      border-top: 1px solid #ddd;
+      font-size: 10px;
+      color: #666;
+    }
+    #copyStatus {
+      display: none;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background-color: #e9ecef;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="header">
+      <div>AI Auto Marker</div>
+      <button id="closeBtn">✕</button>
+    </div>
+    <div id="content">
+      <div id="status"></div>
+      <div id="textContainer">
+        <div id="textHeader">
+          <div>Results</div>
+          <button id="copyBtn">Copy</button>
+        </div>
+        <div id="extractedText">Press Ctrl+Shift+U to analyze screen</div>
+      </div>
+    </div>
+    <div id="footer">
+      <div id="copyStatus">Response displayed</div>
+      <div>Press Ctrl+Shift+U to analyze</div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

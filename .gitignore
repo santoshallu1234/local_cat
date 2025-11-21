@@ -1,5 +1,6 @@
 # Node.js dependencies
 node_modules/
+windows-app/node_modules/
 npm-debug.log*
 .npm/
 .npmrc
@@ -42,7 +43,7 @@ out/
 
 # Extension files
 *.crx
-*.zip
+
 
 # Temporary files
 tmp/
