@@ -1,5 +1,6 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, clipboard, Notification } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const captureAndProcess = require('./capture');
 
 let mainWindow = null;
@@ -7,17 +8,25 @@ let tray = null;
 
 // Create the main application window
 function createWindow() {
+  // Create a minimal hidden window
   mainWindow = new BrowserWindow({
-    width: 300,
-    height: 200,
+    width: 1,
+    height: 1,
+    x: 3000,                     // Position off-screen
+    y: 3000,                     // Position off-screen
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     },
     resizable: false,
-    movable: true,
+    movable: false,
     frame: false,
-    show: false // Hidden by default
+    show: false,                 // Hidden by default
+    transparent: true,           // Transparent window
+    fullscreenable: false,
+    skipTaskbar: true,           // Don't show in taskbar
+    alwaysOnTop: false,
+    backgroundColor: '#00000000' // Transparent background
   });
 
   // Load the popup HTML
@@ -38,6 +47,10 @@ function createTray() {
       click: captureScreen
     },
     {
+      label: 'View Results',
+      click: showResults
+    },
+    {
       label: 'Quit',
       click: () => {
         app.quit();
@@ -52,25 +65,78 @@ function createTray() {
   tray.on('click', captureScreen);
 }
 
+// Show results in console
+function showResults() {
+  const { spawn } = require('child_process');
+  const python = spawn('python', ['console_results.py']);
+  
+  python.stdout.on('data', (data) => {
+    console.log(data.toString());
+  });
+  
+  python.stderr.on('data', (data) => {
+    console.error(data.toString());
+  });
+  
+  python.on('close', (code) => {
+    console.log(`Python script exited with code ${code}`);
+  });
+}
+
+// Helper function to truncate text to last 50 characters if too long
+function truncateTextForNotification(text) {
+  if (text.length <= 50) {
+    return text;
+  }
+  return '...' + text.substring(text.length - 50);
+}
+
 // Capture screen and process
 async function captureScreen() {
   try {
-    if (mainWindow) {
-      // Show processing status
-      mainWindow.webContents.send('update-status', 'Capturing screen...');
-      mainWindow.show();
+    // Show processing status in console only
+    console.log('Capturing screen...');
+    
+    // Capture and process the screen
+    const result = await captureAndProcess();
+    
+    // Handle result - copy to clipboard and save to file
+    if (result.success) {
+      // Save results to file
+      fs.writeFileSync('results.txt', result.text);
       
-      // Capture and process the screen
-      const result = await captureAndProcess();
+      // Copy to clipboard
+      clipboard.writeText(result.text);
       
-      // Send result to popup
-      mainWindow.webContents.send('display-result', result);
+      // Show answer in notification (last 50 chars if too long)
+      const notificationText = truncateTextForNotification(result.text);
+      new Notification({
+        title: 'AI Auto Marker - Results',
+        body: notificationText
+      }).show();
+    } else {
+      console.error('Error:', result.error);
+      
+      // Save error to file
+      fs.writeFileSync('results.txt', 'Error: ' + result.error);
+      
+      // Show error notification
+      new Notification({
+        title: 'AI Auto Marker - Error',
+        body: truncateTextForNotification(result.error)
+      }).show();
     }
   } catch (error) {
     console.error('Error capturing screen:', error);
-    if (mainWindow) {
-      mainWindow.webContents.send('update-status', 'Error: ' + error.message);
-    }
+    
+    // Save error to file
+    fs.writeFileSync('results.txt', 'Error capturing screen: ' + error.message);
+    
+    // Show error notification
+    new Notification({
+      title: 'AI Auto Marker - Error',
+      body: truncateTextForNotification(error.message)
+    }).show();
   }
 }
 
@@ -113,7 +179,7 @@ app.on('window-all-closed', () => {
 // IPC handlers
 ipcMain.on('close-window', () => {
   if (mainWindow) {
-    mainWindow.hide();
+    mainWindow.hide();  // Hide instead of close to keep the window ready for next use
   }
 });
 

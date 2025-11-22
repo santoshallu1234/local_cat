@@ -11,7 +11,8 @@
     "system.display"
   ],
   "host_permissions": [
-    "https://local-cat.vercel.app/*"
+    "https://local-cat.vercel.app/*",
+    "http://localhost:3000/*"
   ],
   "background": {
     "service_worker": "background.js"

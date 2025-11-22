@@ -1,5 +1,5 @@
-// Server URL - using the HTTPS endpoint
-const SERVER_URL = 'https://local-cat.vercel.app/solve-mcqs-base64';
+// Server URL - using the local endpoint
+const SERVER_URL = 'http://localhost:3000/solve-mcqs-base64';
 
 // Variable to store the last extracted text and AI answers
 let lastExtractedText = '';
@@ -147,19 +147,25 @@ async function captureVisibleTab(tab, sendResponse) {
           console.log('AI Answers:', serverResponse.aiAnswers);
           console.log('Extracted Text:', serverResponse.extractedText);
           
-          // Show response in popup
+          // Show response in popup if enabled and update tooltip
           const displayText = serverResponse.aiAnswers || serverResponse.extractedText || '';
-          showResponseInPopup(displayText);
-          
-          // Update the extension tooltip with the extracted text
-          const truncatedText = displayText.substring(0, 100) + (displayText.length > 100 ? '...' : '');
-          try {
-            if (chrome.action && typeof chrome.action.setTitle === 'function') {
-              chrome.action.setTitle({ title: `Response: ${truncatedText}` });
+          // Check if popup is enabled
+          chrome.storage.sync.get(['popupEnabled'], function(settings) {
+            const popupEnabled = settings.popupEnabled !== undefined ? settings.popupEnabled : true; // Default to true
+            if (popupEnabled) {
+              showResponseInPopup(displayText);
             }
-          } catch (error) {
-            console.error('Error setting title:', error);
-          }
+            
+            // Update the extension tooltip with the extracted text
+            const truncatedText = displayText.substring(0, 100) + (displayText.length > 100 ? '...' : '');
+            try {
+              if (chrome.action && typeof chrome.action.setTitle === 'function') {
+                chrome.action.setTitle({ title: `Response: ${truncatedText}` });
+              }
+            } catch (error) {
+              console.error('Error setting title:', error);
+            }
+          });
         } else {
           console.log('No text extracted from server response');
           lastServerResponse = serverResponse;
@@ -171,6 +177,14 @@ async function captureVisibleTab(tab, sendResponse) {
           } catch (error) {
             console.error('Error setting title:', error);
           }
+          
+          // Check if popup is enabled and show a message
+          chrome.storage.sync.get(['popupEnabled'], function(settings) {
+            const popupEnabled = settings.popupEnabled !== undefined ? settings.popupEnabled : true; // Default to true
+            if (popupEnabled) {
+              showResponseInPopup('No text extracted from the image');
+            }
+          });
         }
         
         // Send the response back to the popup if we have a callback
@@ -179,7 +193,7 @@ async function captureVisibleTab(tab, sendResponse) {
             success: serverResponse.success,
             error: serverResponse.error,
             aiAnswers: serverResponse.aiAnswers || 'No AI answers available',
-            extractedText: serverResponse.extractedText
+            extractedText: serverResponse.extractedText || ''
           };
           console.log('Sending response to popup:', responseToSend);
           sendResponse(responseToSend);
@@ -195,6 +209,15 @@ async function captureVisibleTab(tab, sendResponse) {
         } catch (error) {
           console.error('Error setting title:', error);
         }
+        
+        // Check if popup is enabled and show error message
+        chrome.storage.sync.get(['popupEnabled'], function(settings) {
+          const popupEnabled = settings.popupEnabled !== undefined ? settings.popupEnabled : true; // Default to true
+          if (popupEnabled) {
+            showResponseInPopup('Server error occurred: ' + error.message);
+          }
+        });
+        
         if (sendResponse) {
           sendResponse({ error: 'Server error: ' + error.message });
         }
@@ -211,6 +234,15 @@ async function captureVisibleTab(tab, sendResponse) {
     } catch (error) {
       console.error('Error setting title:', error);
     }
+    
+    // Check if popup is enabled and show error message
+    chrome.storage.sync.get(['popupEnabled'], function(settings) {
+      const popupEnabled = settings.popupEnabled !== undefined ? settings.popupEnabled : true; // Default to true
+      if (popupEnabled) {
+        showResponseInPopup('Failed to capture page: ' + error.message);
+      }
+    });
+    
     if (sendResponse) {
       sendResponse({ error: 'Failed to capture page: ' + error.message });
     }
@@ -308,12 +340,27 @@ async function sendImageToServer(imageData) {
   try {
     console.log('Sending request to server:', SERVER_URL);
     
+    // Get the selected model and premium token from storage
+    const settings = await new Promise((resolve) => {
+      chrome.storage.sync.get(['selectedModel', 'premiumToken'], function(result) {
+        resolve(result);
+      });
+    });
+    
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // If ChatGPT model is selected and a premium token is provided, add it to headers
+    if (settings.selectedModel === 'chatgpt' && settings.premiumToken) {
+      headers['premium-token'] = settings.premiumToken;
+    }
+    
     // Use the SERVER_URL constant which is already HTTPS
     const response = await fetch(SERVER_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: headers,
       body: JSON.stringify({ image: imageData })
     });
     

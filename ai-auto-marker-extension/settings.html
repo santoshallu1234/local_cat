@@ -4,79 +4,211 @@
   <meta charset="utf-8">
   <style>
     body {
-      width: 300px;
+      width: 350px;
       margin: 0;
       padding: 20px;
-      font-family: Arial, sans-serif;
-      background-color: #f5f5f5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8f9fa;
+      color: #333;
     }
     .container {
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 20px;
     }
     h1 {
-      font-size: 18px;
-      margin: 0 0 10px 0;
-      color: #333;
+      font-size: 22px;
+      margin: 0 0 5px 0;
+      color: #202124;
+      text-align: center;
+      font-weight: 500;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #5f6368;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
     }
     .setting {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .setting:last-child {
+      margin-bottom: 0;
     }
     label {
       font-size: 14px;
-      font-weight: bold;
-      color: #555;
+      font-weight: 500;
+      color: #202124;
     }
     select, input {
-      padding: 8px;
-      border: 1px solid #ddd;
+      padding: 10px 12px;
+      border: 1px solid #dadce0;
       border-radius: 4px;
       font-size: 14px;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    select:focus, input:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 1px #1a73e8;
     }
     button {
-      padding: 10px;
-      background-color: #4285f4;
+      padding: 12px 16px;
+      background-color: #1a73e8;
       color: white;
       border: none;
       border-radius: 4px;
       font-size: 14px;
+      font-weight: 500;
       cursor: pointer;
-      margin-top: 10px;
+      transition: background-color 0.2s;
+      margin-top: 8px;
     }
     button:hover {
-      background-color: #3367d6;
+      background-color: #1b66c9;
+    }
+    button:active {
+      background-color: #185abc;
     }
     .status {
-      padding: 10px;
+      padding: 12px 16px;
       border-radius: 4px;
       text-align: center;
       font-size: 14px;
+      font-weight: 500;
       display: none;
+      margin-top: 16px;
     }
     .success {
-      background-color: #d4edda;
-      color: #155724;
+      background-color: #e6f4ea;
+      color: #0d652d;
+      border: 1px solid #aecfad;
+    }
+    .error {
+      background-color: #fce8e6;
+      color: #c5221f;
+      border: 1px solid #f6aea9;
+    }
+    .info {
+      background-color: #e8f0fe;
+      color: #1a73e8;
+      border: 1px solid #a8c7fa;
+    }
+    #premiumTokenSection {
+      display: none;
+    }
+    #premiumTokenInput {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #tokenStatus {
+      font-size: 13px;
+      margin-top: 8px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      display: none;
+    }
+    .valid {
+      background-color: #e6f4ea;
+      color: #0d652d;
+      border: 1px solid #aecfad;
+    }
+    .invalid {
+      background-color: #fce8e6;
+      color: #c5221f;
+      border: 1px solid #f6aea9;
+    }
+    .credits-info {
+      font-size: 13px;
+      color: #5f6368;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .credits-value {
+      font-weight: 600;
+      color: #1a73e8;
+    }
+    .model-info {
+      font-size: 12px;
+      color: #5f6368;
+      margin-top: 4px;
+    }
+    .divider {
+      height: 1px;
+      background-color: #dadce0;
+      margin: 8px 0;
+    }
+    .header-icon {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="setting">
-      <select id="closeTiming">
-        <option value="1000">1 second</option>
-        <option value="2000">2 seconds</option>
-        <option value="3000" selected>3 seconds</option>
-        <option value="5000">5 seconds</option>
-        <option value="10000">10 seconds</option>
-        <option value="0">Never auto-close</option>
-      </select>
-    </div>
+    <div class="header-icon">🐱</div>
+    <h1>Local Cat Settings</h1>
+    <div class="subtitle">AI-powered MCQ Solver Extension</div>
     
-    <button id="saveBtn">Save Settings</button>
-    <div id="status" class="status"></div>
+    <div class="card">
+      <div class="setting">
+        <label for="modelSelection">AI Model Selection</label>
+        <select id="modelSelection">
+          <option value="llama">Llama 3.3 (Free)</option>
+          <option value="chatgpt">ChatGPT (Premium)</option>
+        </select>
+        <div class="model-info">Llama: Free usage with standard performance</div>
+        <div class="model-info">ChatGPT: Premium model with enhanced accuracy</div>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div class="setting" id="premiumTokenSection">
+        <label for="premiumToken">Premium Token</label>
+        <input type="text" id="premiumTokenInput" placeholder="Enter your premium token">
+        <div id="tokenStatus"></div>
+        <div class="credits-info">
+          Credits remaining: <span class="credits-value" id="creditsValue">-</span>
+        </div>
+      </div>
+      
+      <div class="setting">
+        <label for="popupEnabled">Popup Display</label>
+        <select id="popupEnabled">
+          <option value="true" selected>Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+        <div class="model-info">Enable or disable the popup window that shows results</div>
+      </div>
+      
+      <div class="setting">
+        <label for="closeTiming">Popup Auto-close Timing</label>
+        <select id="closeTiming">
+          <option value="1000">1 second</option>
+          <option value="2000">2 seconds</option>
+          <option value="3000" selected>3 seconds</option>
+          <option value="5000">5 seconds</option>
+          <option value="10000">10 seconds</option>
+          <option value="0">Never auto-close</option>
+        </select>
+      </div>
+      
+      <button id="saveBtn">Save Settings</button>
+      <div id="status" class="status"></div>
+    </div>
   </div>
   
   <script src="settings.js"></script>

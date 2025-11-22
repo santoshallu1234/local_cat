@@ -6,7 +6,12 @@ This is a Windows desktop application version of the AI Auto Marker Chrome exten
 
 - Capture your entire screen with a keyboard shortcut (Ctrl+Shift+U)
 - Process screenshots with AI to extract text and answer MCQ questions
-- Display results in a popup window
+- **Completely invisible operation** - No visible windows during screen sharing
+- **Multiple result delivery methods**:
+  - Automatic clipboard copy
+  - Text file output (results.txt)
+  - System notifications
+  - Console display option
 - System tray icon for quick access
 
 ## Installation
@@ -26,11 +31,30 @@ This is a Windows desktop application version of the AI Auto Marker Chrome exten
 
 1. Launch the application
 2. Press Ctrl+Shift+U to capture your screen
-3. The application will process the screenshot and display results
-4. Use the "Copy" button to copy results to clipboard
-5. Click the "✕" button or click outside the window to close it
+3. The application will process the screenshot invisibly
+4. Results are automatically:
+   - Copied to your clipboard
+   - Saved to results.txt
+   - Notified via system notification
+5. To view results in console, click "View Results" in the system tray menu
 
 You can also click the system tray icon to trigger a screen capture.
+
+## Invisible Operation Mode
+
+The application now operates completely invisibly to screen sharing applications:
+
+- Window is hidden at all times (positioned off-screen)
+- No visible UI elements during operation
+- Results delivered through non-visual means
+- System tray icon is the only visible element
+
+## Result Delivery Methods
+
+1. **Clipboard Copy**: Results are automatically copied to your clipboard
+2. **Text File**: Results are saved to `results.txt` in the application directory
+3. **System Notifications**: Brief notifications show processing status
+4. **Console Display**: Click "View Results" in the system tray to see results in a console window
 
 ## Building Executable
 
@@ -41,3 +65,12 @@ npm run build
 ```
 
 This will create a distributable package in the `dist` folder.
+
+## Advanced Hidden Window (C++ Version)
+
+For even better invisibility, you can compile the included C++ version which creates a truly hidden window:
+
+1. Run `build_hidden_window.bat` to compile the C++ version
+2. This creates `hidden_window.exe` which runs completely invisibly
+
+Note: The C++ version only creates the hidden window and doesn't include the full AI processing features.
