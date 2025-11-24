@@ -192,7 +192,7 @@ app.post('/solve-mcqs-base64', async (req, res) => {
     let aiAnswers = null;
     try {
       const response = await model.invoke([
-        ["system", "You are an AI assistant that finds MCQ questions, programming questions, or other academic questions in text and provides detailed answers. For programming questions, provide complete code solutions with explanations. For MCQ questions, provide ONLY the answers without any explanations or theory. For other questions, provide concise and accurate answers. If no relevant questions are found, respond with 'No relevant questions found.'"],
+        ["system", "You are an AI assistant that finds MCQ questions, programming questions, or other academic questions in text and provides detailed answers. For programming questions, provide ONLY the code solution without any explanations or additional text. For MCQ questions, provide ONLY the answers  without any explanations or theory. For other questions, provide concise and accurate answers. If no relevant questions are found, respond with 'No relevant questions found.'"],
         ["user", text]
       ]);
       

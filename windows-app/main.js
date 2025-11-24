@@ -227,7 +227,6 @@ async function simulateTyping() {
   // Give user time to focus on the target application
   console.log('Please focus on the target application where you want the text to be typed.');
   console.log('The typing simulation will start in 3 seconds...');
-  console.log('Press Backspace during typing to stop the process.');
   
   // Wait 3 seconds before starting to type
   await new Promise(resolve => setTimeout(resolve, 3000));
@@ -275,7 +274,51 @@ async function simulateTyping() {
   }
 }
 
-// Capture screen and process
+// New function to capture screen, get response, and start typing automatically
+async function captureAndType() {
+  try {
+    // Show processing status in console only
+    console.log('Capturing screen...');
+    
+    // Capture and process the screen
+    const result = await captureAndProcess();
+    
+    // Handle result - copy to clipboard and save to file
+    if (result.success) {
+      // Save results to file
+      fs.writeFileSync('results.txt', result.text);
+      
+      // Copy to clipboard
+      clipboard.writeText(result.text);
+      
+      // Store AI answer in our variable and localStorage-like storage
+      if (result.aiAnswers && result.aiAnswers !== 'No AI answers available') {
+        lastAiAnswer = result.aiAnswers;
+      } else {
+        lastAiAnswer = result.extractedText || '';
+      }
+      
+      // Save to localStorage-like storage
+      saveToLocalStorage('lastAiAnswer', lastAiAnswer);
+      
+      // Automatically start typing the answer
+      console.log('Starting automatic typing of AI answer...');
+      await simulateTyping();
+    } else {
+      console.error('Error:', result.error);
+      
+      // Save error to file
+      fs.writeFileSync('results.txt', 'Error: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Error capturing screen:', error);
+    
+    // Save error to file
+    fs.writeFileSync('results.txt', 'Error capturing screen: ' + error.message);
+  }
+}
+
+// Capture screen and process (keep this for backward compatibility)
 async function captureScreen() {
   try {
     // Show processing status in console only
@@ -354,15 +397,15 @@ function registerGlobalShortcuts() {
   // Existing shortcut for capture
   const ret1 = globalShortcut.register('Control+Shift+U', captureScreen);
   
-  // New shortcut for typing simulation
-  const ret2 = globalShortcut.register('Control+Shift+P', simulateTyping);
+  // New shortcut for capture and automatic typing
+  const ret2 = globalShortcut.register('Control+Shift+P', captureAndType);
   
   if (!ret1) {
     console.log('Failed to register global shortcut for capture');
   }
   
   if (!ret2) {
-    console.log('Failed to register global shortcut for typing');
+    console.log('Failed to register global shortcut for capture and type');
   }
   
   console.log('Global shortcuts registered:');
