@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Server URL - same as the Chrome extension
-const SERVER_URL = 'https://local-cat.vercel.app/solve-mcqs-base64';
+const SERVER_URL = 'http://localhost:3000/solve-mcqs-base64';
 
 /**
  * Capture screen and send to server for processing

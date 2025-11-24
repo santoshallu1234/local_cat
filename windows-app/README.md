@@ -13,6 +13,7 @@ This is a Windows desktop application version of the AI Auto Marker Chrome exten
   - System notifications
   - Console display option
 - System tray icon for quick access
+- **Automatic AI Answer Typing** - Type stored AI answers automatically with Ctrl+Shift+P
 
 ## Installation
 
@@ -37,6 +38,10 @@ This is a Windows desktop application version of the AI Auto Marker Chrome exten
    - Saved to results.txt
    - Notified via system notification
 5. To view results in console, click "View Results" in the system tray menu
+6. Press Ctrl+Shift+P to automatically type the last AI answer:
+   - The text will be typed character by character automatically
+   - Focus on the target application before pressing the shortcut
+   - The typing will start after a 3-second delay
 
 You can also click the system tray icon to trigger a screen capture.
 
@@ -55,6 +60,7 @@ The application now operates completely invisibly to screen sharing applications
 2. **Text File**: Results are saved to `results.txt` in the application directory
 3. **System Notifications**: Brief notifications show processing status
 4. **Console Display**: Click "View Results" in the system tray to see results in a console window
+5. **Automatic Typing**: Press Ctrl+Shift+P to type the last AI answer automatically
 
 ## Building Executable
 

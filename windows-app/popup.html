@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <style>
     body {
-      width: 300px;
-      min-height: 150px;
-      max-height: 200px;
+      width: 100%;
+      min-height: 200px;
+      max-height: 300px;
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
       background-color: #ffffff;
       color: #333333;
+      /* Hide scrollbars but keep scrolling functionality */
       overflow: hidden;
     }
     #container {
@@ -19,6 +20,16 @@
       flex-direction: column;
       height: 100%;
       width: 100%;
+      padding: 0;
+      margin: 0;
+      /* Enable scrolling on container instead */
+      overflow: auto;
+      /* Hide scrollbars */
+      scrollbar-width: none; /* Firefox */
+    }
+    /* Hide scrollbars for Webkit browsers */
+    #container::-webkit-scrollbar {
+      display: none;
     }
     #header {
       padding: 5px 10px;
@@ -50,7 +61,8 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 10px;
+      padding: 0;
+      margin: 0;
       overflow: hidden;
     }
     #status {
@@ -59,7 +71,7 @@
       text-align: center;
       font-size: 11px;
       border-radius: 3px;
-      margin-bottom: 5px;
+      margin: 0;
     }
     .success {
       background-color: #d4edda;
@@ -76,53 +88,67 @@
     #textContainer {
       flex: 1;
       border: 1px solid #ddd;
-      border-radius: 3px;
+      border-radius: 0; /* Remove border radius */
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      margin: 0;
+      padding: 0;
     }
     #textHeader {
-      padding: 5px 8px;
+      padding: 1px 2px;
       background-color: #f8f9fa;
       border-bottom: 1px solid #ddd;
       font-weight: bold;
-      font-size: 5px;
+      font-size: 2px;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start; /* Align content to start */
       align-items: center;
+      gap: 10px; /* Add space between elements */
     }
     #copyBtn {
       background: #4285f4;
       color: white;
       border: none;
       border-radius: 3px;
-      padding: 2px 6px;
+      padding: 1px 2px;
       font-size: 5px;
       cursor: pointer;
+      margin: 0; /* Remove margin */
     }
     #copyBtn:hover {
       background: #3367d6;
     }
     #extractedText {
       flex: 1;
-      padding: 8px;
-      overflow-x: auto; /* Enable horizontal scrolling */
-      overflow-y: auto; /* Keep vertical scrolling */
+      padding: 5px; /* Reduce padding */
+      overflow-x: auto;
+      overflow-y: auto;
       font-size: 12px;
-      white-space: pre; /* Preserve whitespace and allow horizontal scrolling */
-      word-break: keep-all; /* Prevent word breaking to allow horizontal scrolling */
+      white-space: pre-wrap;
+      word-break: break-word;
       background-color: #ffffff;
       line-height: 1.4;
-      max-height: 120px;
+      max-height: 200px;
+      margin: 0;
+      /* Improve scrolling behavior */
+      scroll-behavior: smooth;
+      /* Hide scrollbars */
+      scrollbar-width: none; /* Firefox */
+    }
+    /* Hide scrollbars for Webkit browsers */
+    #extractedText::-webkit-scrollbar {
+      display: none;
     }
     #footer {
       display: flex;
       justify-content: space-between;
-      padding: 5px 10px;
+      padding: 3px 5px; /* Reduce padding */
       background-color: #f8f9fa;
       border-top: 1px solid #ddd;
       font-size: 10px;
       color: #666;
+      margin: 0;
     }
     #copyStatus {
       display: none;
@@ -134,23 +160,19 @@
 </head>
 <body>
   <div id="container">
-    <div id="header">
-      <div>AI Auto Marker</div>
-      <button id="closeBtn">✕</button>
-    </div>
     <div id="content">
       <div id="status"></div>
       <div id="textContainer">
         <div id="textHeader">
-          <div>Results</div>
           <button id="copyBtn">Copy</button>
+          <div>Results</div>
         </div>
-        <div id="extractedText">Press Ctrl+Shift+U to analyze screen</div>
+        <div id="extractedText">Processing... Please wait while we analyze the page.</div>
       </div>
     </div>
     <div id="footer">
       <div id="copyStatus">Response displayed</div>
-      <div>Press Ctrl+Shift+U to analyze</div>
+      <div>Press Ctrl+Shift+U to analyze | Ctrl+Shift+P to auto-type AI answer</div>
     </div>
   </div>
   <script src="popup.js"></script>

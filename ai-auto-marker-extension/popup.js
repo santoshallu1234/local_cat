@@ -27,12 +27,22 @@ document.addEventListener('DOMContentLoaded', function() {
   const urlParams = new URLSearchParams(window.location.search);
   const responseText = urlParams.get('response');
   
-  if (responseText) {
+  if (responseText !== null) { // Check for null instead of falsy to handle empty strings
     // Display the response text
     if (extractedTextDiv) {
-      extractedTextDiv.textContent = decodeURIComponent(responseText);
-      // Scroll to top
+      const decodedText = decodeURIComponent(responseText);
+      console.log('Displaying response from URL parameter:', decodedText);
+      
+      // Check if the decoded text is empty or just whitespace
+      if (decodedText.trim() === '') {
+        extractedTextDiv.textContent = 'Processing complete but no content found';
+      } else {
+        extractedTextDiv.textContent = decodedText;
+      }
+      
+      // Scroll to top left to ensure both vertical and horizontal scroll positions are reset
       extractedTextDiv.scrollTop = 0;
+      extractedTextDiv.scrollLeft = 0;
     }
     
     // Show copy status as information only
@@ -63,8 +73,21 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
-      if (response && (response.aiAnswers || response.extractedText)) {
-        displayResponse(response);
+      // Check if we have a response with content
+      if (response) {
+        // Handle case where response has success but no content
+        if (response.success && !(response.aiAnswers || response.extractedText)) {
+          displayResponse({
+            aiAnswers: 'Processing complete but no questions found in the image.',
+            extractedText: response.extractedText || ''
+          });
+        } else if (response.aiAnswers || response.extractedText || response.error) {
+          // Display response if it has content or an error
+          displayResponse(response);
+        } else {
+          // If no response yet, wait a bit and try again
+          setTimeout(listenForServerResponse, 500);
+        }
       } else {
         // If no response yet, wait a bit and try again
         setTimeout(listenForServerResponse, 500);
@@ -78,8 +101,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let textToDisplay = '';
     
     // Prefer AI answers if available, otherwise use extracted text
-    if (response.aiAnswers && response.aiAnswers !== 'No AI answers available' && response.aiAnswers !== 'No relevant questions found.') {
-      textToDisplay = response.aiAnswers;
+    if (response.aiAnswers && response.aiAnswers !== 'No AI answers available') {
+      // Check if the response contains "No relevant questions found." but has more content after it
+      if (response.aiAnswers.startsWith('No relevant questions found.') && response.aiAnswers.length > 'No relevant questions found.'.length) {
+        // Display the full response including the solution after "No relevant questions found."
+        textToDisplay = response.aiAnswers;
+      } else if (response.aiAnswers !== 'No relevant questions found.') {
+        // Display the response if it doesn't start with "No relevant questions found."
+        textToDisplay = response.aiAnswers;
+      } else {
+        // Only "No relevant questions found." - try extracted text
+        textToDisplay = response.extractedText || 'No relevant questions found.';
+      }
     } else if (response.extractedText) {
       textToDisplay = response.extractedText;
     } else {
@@ -89,8 +122,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Display in the popup
     if (extractedTextDiv) {
       extractedTextDiv.textContent = textToDisplay;
-      // Scroll to top
+      // Scroll to top left to ensure both vertical and horizontal scroll positions are reset
       extractedTextDiv.scrollTop = 0;
+      extractedTextDiv.scrollLeft = 0;
+      
+      // Add a small delay to ensure content is rendered before scrolling
+      setTimeout(() => {
+        extractedTextDiv.scrollTop = 0;
+        extractedTextDiv.scrollLeft = 0;
+      }, 10);
     }
     
     updateStatus('Analysis complete!', 'success');

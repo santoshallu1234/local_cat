@@ -43,6 +43,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep the message channel open for async response
   } else if (message.type === 'GET_LATEST_RESPONSE') {
     // Send the latest server response to the popup
+    console.log('Sending latest server response to popup:', lastServerResponse);
     if (lastServerResponse) {
       sendResponse(lastServerResponse);
     } else {
@@ -82,6 +83,14 @@ async function captureVisibleTab(tab, sendResponse) {
   try {
     console.log('Starting capture of tab:', tab);
     
+    // Additional check for restricted sites
+    const restrictedSites = ['leetcode.com', 'hackerrank.com'];
+    const isRestricted = restrictedSites.some(site => tab.url.includes(site));
+    
+    if (isRestricted) {
+      console.log('Detected restricted site, attempting capture anyway');
+    }
+    
     // Show capturing status if we have a response callback
     if (sendResponse) {
       // Update the extension tooltip with capturing status
@@ -101,13 +110,18 @@ async function captureVisibleTab(tab, sendResponse) {
       // Check if extension context is still valid
       if (chrome.runtime.lastError) {
         console.error('Capture error:', chrome.runtime.lastError);
+        const errorMessage = chrome.runtime.lastError.message || 'Unknown capture error';
+        
+        // Log specific error for debugging
+        console.log('Tab URL was:', tab ? tab.url : 'unknown');
+        
         if (sendResponse) {
-          sendResponse({ error: 'Failed to capture page: ' + chrome.runtime.lastError.message });
+          sendResponse({ error: 'Failed to capture page: ' + errorMessage });
         }
         // Set error tooltip
         try {
           if (chrome.action && typeof chrome.action.setTitle === 'function') {
-            chrome.action.setTitle({ title: 'AI Auto Marker - Capture failed' });
+            chrome.action.setTitle({ title: 'AI Auto Marker - Capture failed: ' + errorMessage.substring(0, 30) });
           }
         } catch (error) {
           console.error('Error setting title:', error);
@@ -271,10 +285,10 @@ function showResponseInPopup(responseText) {
         const windowOptions = {
           url: 'popup.html?response=' + encodeURIComponent(responseText),
           type: 'popup',
-          width: 200,
-          height: 100,
-          left: workArea.left + 30, // 10 pixels from the left edge
-          top: workArea.top + workArea.height - 100, // Exactly at the bottom (height = 200)
+          width: 120, // Increased width for better content display
+          height: 80, // Increased height for better content display
+          left: workArea.left + 40, // 20 pixels from the left edge
+          top: workArea.top + workArea.height - 80, // Adjusted for new height
           //focused: true
         };
         
@@ -295,8 +309,8 @@ function createPopupWindow(responseText, windowOptions) {
   const defaultOptions = {
     url: 'popup.html?response=' + encodeURIComponent(responseText),
     type: 'popup',
-    width: 200,
-    height: 100,
+    width: 120, // Increased width for better content display
+    height: 80, // Increased height for better content display
     focused: true
   };
   
