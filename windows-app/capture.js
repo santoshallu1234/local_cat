@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Server URL - same as the Chrome extension
-const SERVER_URL = 'http://localhost:3000/solve-mcqs-base64';
+const SERVER_URL = 'https://local-cat.vercel.app/solve-mcqs-base64';
 
 /**
  * Capture screen and send to server for processing
@@ -21,12 +21,13 @@ async function captureAndProcess() {
     
     console.log('Sending image to server...');
     
-    // Send to server
+    // Send to server with premium token header
     const response = await axios.post(SERVER_URL, {
       image: base64Image
     }, {
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'premium-token': 'my-premium-token-123'
       },
       timeout: 30000 // 30 second timeout
     });

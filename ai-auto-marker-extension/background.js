@@ -1,5 +1,5 @@
-// Server URL - using the local endpoint
-const SERVER_URL = 'http://localhost:3000/solve-mcqs-base64';
+// Server URL - using the vercel endpoint
+const SERVER_URL = 'https://local-cat.vercel.app/solve-mcqs-base64';
 
 // Variable to store the last extracted text and AI answers
 let lastExtractedText = '';

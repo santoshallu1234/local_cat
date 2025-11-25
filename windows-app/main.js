@@ -92,8 +92,12 @@ function createTray() {
   tray = new Tray(path.join(__dirname, 'icon.png'));
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Capture Screen',
-      click: captureScreen
+      label: 'Capture Screen and Type (Ctrl+Shift+P)',
+      click: captureAndType
+    },
+    {
+      label: 'Capture Screen (Ctrl+Shift+R)',
+      click: captureAndDisplay
     },
     {
       label: 'View Results',
@@ -111,7 +115,7 @@ function createTray() {
   tray.setToolTip('AI Auto Marker');
   
   // Add click event to tray icon
-  tray.on('click', captureScreen);
+  tray.on('click', captureAndType);
 }
 
 // Show results in console
@@ -318,17 +322,14 @@ async function captureAndType() {
   }
 }
 
-// Capture screen and process (keep this for backward compatibility)
-async function captureScreen() {
+// New function to capture screen and send to server without displaying results
+async function captureAndDisplay() {
   try {
     // Show processing status in console only
     console.log('Capturing screen...');
     
-    // Capture and process the screen FIRST
+    // Capture and process the screen
     const result = await captureAndProcess();
-    
-    // ONLY create popup window after getting the response
-    const popup = createPopupWindow();
     
     // Handle result - copy to clipboard and save to file
     if (result.success) {
@@ -348,28 +349,16 @@ async function captureScreen() {
       // Save to localStorage-like storage
       saveToLocalStorage('lastAiAnswer', lastAiAnswer);
       
-      // Send result to popup window
-      if (popup && !popup.isDestroyed()) {
-        popup.webContents.send('display-result', {
-          success: true,
-          text: result.text,
-          aiAnswers: result.aiAnswers,
-          extractedText: result.extractedText
-        });
-      }
+      // Don't display popup - just log success
+      console.log('Screen captured and sent to server successfully');
     } else {
       console.error('Error:', result.error);
       
       // Save error to file
       fs.writeFileSync('results.txt', 'Error: ' + result.error);
       
-      // Send error to popup window
-      if (popup && !popup.isDestroyed()) {
-        popup.webContents.send('display-result', {
-          success: false,
-          error: result.error
-        });
-      }
+      // Don't display popup - just log error
+      console.error('Screen capture failed');
     }
   } catch (error) {
     console.error('Error capturing screen:', error);
@@ -377,40 +366,32 @@ async function captureScreen() {
     // Save error to file
     fs.writeFileSync('results.txt', 'Error capturing screen: ' + error.message);
     
-    // Create popup window only when there's an error
-    const popup = createPopupWindow();
-    
-    // Send error to popup window
-    setTimeout(() => {
-      if (popup && !popup.isDestroyed()) {
-        popup.webContents.send('display-result', {
-          success: false,
-          error: error.message
-        });
-      }
-    }, 100);
+    // Don't display popup - just log error
+    console.error('Screen capture failed with exception');
   }
 }
 
+
+
 // Register global shortcuts
 function registerGlobalShortcuts() {
-  // Existing shortcut for capture
-  const ret1 = globalShortcut.register('Control+Shift+U', captureScreen);
+  // Register shortcut for capture and automatic typing
+  const ret1 = globalShortcut.register('Control+Shift+P', captureAndType);
   
-  // New shortcut for capture and automatic typing
-  const ret2 = globalShortcut.register('Control+Shift+P', captureAndType);
+  // Register shortcut for capture and display without auto-typing
+  const ret2 = globalShortcut.register('Control+Shift+R', captureAndDisplay);
   
   if (!ret1) {
-    console.log('Failed to register global shortcut for capture');
-  }
-  
-  if (!ret2) {
     console.log('Failed to register global shortcut for capture and type');
   }
   
+  if (!ret2) {
+    console.log('Failed to register global shortcut for capture and display');
+  }
+  
   console.log('Global shortcuts registered:');
-  console.log('- Control+Shift+U:', globalShortcut.isRegistered('Control+Shift+U'));
   console.log('- Control+Shift+P:', globalShortcut.isRegistered('Control+Shift+P'));
+  console.log('- Control+Shift+R:', globalShortcut.isRegistered('Control+Shift+R'));
 }
 
 // App lifecycle events
@@ -428,8 +409,8 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   // Unregister the global shortcuts
-  globalShortcut.unregister('Control+Shift+U');
   globalShortcut.unregister('Control+Shift+P');
+  globalShortcut.unregister('Control+Shift+R');
   globalShortcut.unregisterAll();
   
   // Stop any ongoing typing processes

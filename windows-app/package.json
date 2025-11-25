@@ -5,7 +5,25 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "package": "electron-packager . \"AI Auto Marker\" --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "build": {
+    "appId": "com.ai-auto-marker.app",
+    "productName": "AI Auto Marker",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "sign": false,
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6",
@@ -14,7 +32,8 @@
   },
   "devDependencies": {
     "electron": "^27.0.0",
-    "electron-builder": "^24.0.0"
+    "electron-builder": "^24.0.0",
+    "electron-packager": "^17.1.2"
   },
   "keywords": [
     "ai",
