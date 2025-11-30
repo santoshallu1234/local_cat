@@ -5,6 +5,8 @@ import path from 'path';
 import { createWorker } from 'tesseract.js';
 import { ChatGroq } from "@langchain/groq";
 import { createClient } from 'redis';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
 
 // Load environment variables
 dotenv.config();
@@ -385,6 +387,138 @@ app.get('/getlogs/:token', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Failed to retrieve token logs: ' + error.message
+    });
+  }
+});
+
+// New endpoint to handle base64 image data with Google Gemini AI
+app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
+  const endpointStartTime = Date.now();
+  console.log('=== /solve-mcqs-base64-Gemini Endpoint Timing ===');
+  
+  try {
+    const { image } = req.body;
+    
+    if (!image) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Image data is required' 
+      });
+    }
+    
+    // Get token from premium-token header (required for this endpoint)
+    const token = req.headers['premium-token'];
+    
+    // Check if token is provided
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Premium token is required for this endpoint' 
+      });
+    }
+    
+    // Validate token exists and has remaining uses
+    let tokenData = null;
+    
+    if (useRedis && redisClient) {
+      // Retrieve token data from Redis
+      tokenData = await redisClient.get(token);
+    } else {
+      // Retrieve token data from memory
+      if (tokenModelMap.has(token)) {
+        tokenData = JSON.stringify(tokenModelMap.get(token));
+      }
+    }
+    
+    // If token not found or no remaining uses, deny access
+    if (!tokenData) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid or expired premium token' 
+      });
+    }
+    
+    const parsedData = useRedis ? JSON.parse(tokenData) : JSON.parse(tokenData);
+    if (parsedData.count <= 0) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Premium token has no remaining uses' 
+      });
+    }
+    
+    // Create Google Generative AI instance
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY);
+    
+    // Get the generative model (using a valid model name)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    
+    // If image is already a data URL, extract the base64 data
+    // Otherwise, assume it's base64 data
+    let base64Data;
+    if (image.startsWith('data:image')) {
+      base64Data = image.split(',')[1];
+    } else {
+      base64Data = image;
+    }
+    
+    // Prepare contents for Gemini API
+    const contents = [
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: base64Data,
+        },
+      },
+      { text: "Find any MCQ questions in this image and provide the answers in the format '1. A, 2. B, 3. C 4. E' without any explanations or theory. If no MCQ questions are found, respond with 'No MCQ questions found.'" },
+    ];
+    
+    // Use AI to find and answer MCQ questions if any
+    let aiAnswers = null;
+    try {
+      console.log('Calling Gemini API...');
+      const aiCallStartTime = Date.now();
+      const result = await model.generateContent(contents);
+      const aiCallEndTime = Date.now();
+      console.log(`Gemini API call time: ${aiCallEndTime - aiCallStartTime}ms`);
+      
+      const response = result.response;
+      if (response && response.text) {
+        aiAnswers = response.text();
+      }
+    } catch (aiError) {
+      console.error('AI processing error:', aiError);
+      aiAnswers = "AI processing failed: " + aiError.message;
+    }
+    
+    // Prepare the response
+    const responseJson = {
+      success: true,
+      message: 'Image processed successfully',
+      aiAnswers: aiAnswers,
+      modelUsed: "gemini-2.5-flash"
+    };
+    
+    console.log("Processed base64 image with Google Gemini AI");
+    console.log(aiAnswers);
+    
+    // Log token usage
+    logTokenUsage(token, {
+      modelUsed: "gemini-2.5-flash",
+      aiAnswers: aiAnswers
+    });
+    
+    const endpointEndTime = Date.now();
+    console.log(`Total /solve-mcqs-base64-Gemini endpoint time: ${endpointEndTime - endpointStartTime}ms`);
+    console.log('===================================================');
+    
+    // Send the response
+    res.json(responseJson);
+    
+  } catch (error) {
+    console.error('Error processing base64 image with Gemini:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to process image with Gemini: ' + error.message
     });
   }
 });
