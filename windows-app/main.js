@@ -1,7 +1,7 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const captureAndProcess = require('./capture');
+const { captureAndProcess, captureAndProcessWithGemini } = require('./capture');
 
 // Import nut-js for keyboard automation
 const { keyboard, Key, listener } = require('@nut-tree-fork/nut-js');
@@ -100,8 +100,16 @@ function createTray() {
       click: captureAndDisplay
     },
     {
+      label: 'Capture Screen with Gemini (Ctrl+Shift+Y)',
+      click: captureAndDisplayWithGemini
+    },
+    {
       label: 'View Results',
       click: showResults
+    },
+    {
+      label: 'Test Cursor Display',
+      click: testCursorDisplay
     },
     {
       label: 'Quit',
@@ -207,7 +215,8 @@ async function simulateTyping() {
     try {
       const storagePath = path.join(app.getPath('userData'), 'localStorage.json');
       if (fs.existsSync(storagePath)) {
-        const storageData = JSON.parse(fs.readFileSync(storagePath, 'utf8'));
+        const storageData = fs.readFileSync(storagePath, 'utf8');
+        const storage = JSON.parse(storageData);
         if (storageData['lastAiAnswer']) {
           textToType = storageData['lastAiAnswer'].data || '';
         }
@@ -236,37 +245,57 @@ async function simulateTyping() {
   await new Promise(resolve => setTimeout(resolve, 3000));
   
   try {
-    // Type each character with a delay
-    for (let i = 0; i < textToType.length; i++) {
-      // Check if we should stop typing (simple check without listener)
-      // In a real implementation, we would need a more sophisticated approach
-      // For now, we'll just type without the backspace stop feature
+    // Split text into lines to handle newlines properly
+    const lines = textToType.split('\n');
+    
+    // Type each line
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      const line = lines[lineIndex];
       
-      const char = textToType[i];
+      // Type each character in the line
+      for (let i = 0; i < line.length; i++) {
+        // Check if we should stop typing (simple check without listener)
+        // In a real implementation, we would need a more sophisticated approach
+        // For now, we'll just type without the backspace stop feature
+        
+        const char = line[i];
+        
+        try {
+          // Handle special characters
+          if (char === '\t') {
+            await keyboard.pressKey(Key.Tab);
+            await keyboard.releaseKey(Key.Tab);
+          } else if (char === ' ') {
+            await keyboard.pressKey(Key.Space);
+            await keyboard.releaseKey(Key.Space);
+            
+          } else {
+            // Type the character
+            await keyboard.type(char);
+          }
+          
+          console.log(`Typed character: ${char} (line: ${lineIndex}, index: ${i})`);
+          
+          // Random delay between 50-150ms to simulate human typing
+          const delay = 50 + Math.random() * 100;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } catch (error) {
+          console.error('Error typing character:', error);
+        }
+      }
       
-      try {
-        // Handle special characters
-        if (char === '\n') {
+      // After typing each line (except the last one), press Enter
+      if (lineIndex < lines.length - 1) {
+        try {
           await keyboard.pressKey(Key.Enter);
           await keyboard.releaseKey(Key.Enter);
-        } else if (char === '\t') {
-          await keyboard.pressKey(Key.Tab);
-          await keyboard.releaseKey(Key.Tab);
-        } else if (char === ' ') {
-          await keyboard.pressKey(Key.Space);
-          await keyboard.releaseKey(Key.Space);
-        } else {
-          // Type the character
-          await keyboard.type(char);
+          console.log(`Pressed Enter after line ${lineIndex}`);
+          
+          // Small delay after pressing Enter
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error('Error pressing Enter:', error);
         }
-        
-        console.log(`Typed character: ${char} (index: ${i})`);
-        
-        // Random delay between 50-150ms to simulate human typing
-        const delay = 50 + Math.random() * 100;
-        await new Promise(resolve => setTimeout(resolve, delay));
-      } catch (error) {
-        console.error('Error typing character:', error);
       }
     }
     
@@ -371,27 +400,192 @@ async function captureAndDisplay() {
   }
 }
 
+// New function to capture screen, send to Gemini API, and display result with cursor
+async function captureAndDisplayWithGemini() {
+  // Start overall timer
+  const startTime = Date.now();
+  console.log('=== Ctrl+Shift+Y Process Timing ===');
+  
+  try {
+    // Show processing status in console only
+    console.log('Capturing screen for Gemini processing...');
+    
+    // Time the capture and processing
+    const captureStartTime = Date.now();
+    const result = await captureAndProcessWithGemini();
+    const captureEndTime = Date.now();
+    console.log(`Capture and API processing time: ${captureEndTime - captureStartTime}ms`);
+    
+    // Handle result - copy to clipboard and save to file
+    if (result.success) {
+      // Time file operations
+      const fileOpStartTime = Date.now();
+      
+      // Save results to file
+      fs.writeFileSync('results.txt', result.text);
+      
+      // Copy to clipboard
+      clipboard.writeText(result.text);
+      
+      // Store AI answer in our variable and localStorage-like storage
+      lastAiAnswer = result.text;
+      saveToLocalStorage('lastAiAnswer', lastAiAnswer);
+      
+      const fileOpEndTime = Date.now();
+      console.log(`File operations time: ${fileOpEndTime - fileOpStartTime}ms`);
+      
+      // Display the result using cursor movement
+      console.log('Displaying result with cursor movement...');
+      console.log('Raw result text:', result.text);
+      
+      // Process the text to make it suitable for cursor display
+      let displayText = result.text.trim();
+      
+      // If it's in the format "10. C", extract just the answer part "C"
+      const answerMatch = displayText.match(/^\d+\.\s*([A-Z0-9])/i);
+      if (answerMatch) {
+        displayText = answerMatch[1]; // Just the letter/number answer
+      } else {
+        // For other formats, take the first alphanumeric character
+        const firstCharMatch = displayText.match(/[A-Z0-9]/i);
+        if (firstCharMatch) {
+          displayText = firstCharMatch[0];
+        } else {
+          // Fallback to a simple default
+          displayText = 'A';
+        }
+      }
+      
+      console.log('Processed display text:', displayText);
+      
+      // Time cursor display
+      const cursorStartTime = Date.now();
+      
+      // Execute the VBScript to move cursor with the AI answer
+      const { spawn } = require('child_process');
+      const vbsPath = path.join(__dirname, 'run-cursor.vbs');
+      
+      // Run VBScript with the text as parameter
+      console.log('Executing VBScript with text:', displayText);
+      const vbsProcess = spawn('wscript.exe', ['//nologo', vbsPath, displayText], {
+        cwd: __dirname,
+        detached: true,
+        stdio: ['ignore', 'ignore', 'ignore'] // Ignore all stdio
+      });
+      
+      vbsProcess.on('error', (err) => {
+        console.error('Failed to start VBScript process:', err);
+      });
+      
+      vbsProcess.unref();
+      
+      const cursorEndTime = Date.now();
+      console.log(`Cursor display initiation time: ${cursorEndTime - cursorStartTime}ms`);
+      
+      console.log('Sent result to cursor display');
+    } else {
+      throw new Error(result.error || 'Gemini API processing failed');
+    }
+  } catch (error) {
+    console.error('Error in Gemini capture and display:', error.message);
+    console.error(error.stack);
+    
+    // Save error to file
+    fs.writeFileSync('results.txt', 'Error: ' + error.message);
+    
+    // Even on error, we might want to show something
+    const { spawn } = require('child_process');
+    const vbsPath = path.join(__dirname, 'run-cursor.vbs');
+    
+    // Run VBScript with error message
+    const vbsProcess = spawn('wscript.exe', ['//nologo', vbsPath, 'ERROR'], {
+      cwd: __dirname,
+      detached: true,
+      stdio: ['ignore', 'ignore', 'ignore']
+    });
+    
+    vbsProcess.on('error', (err) => {
+      console.error('Failed to start error VBScript process:', err);
+    });
+    
+    vbsProcess.unref();
+  } finally {
+    // End overall timer
+    const endTime = Date.now();
+    console.log(`Total Ctrl+Shift+Y process time: ${endTime - startTime}ms`);
+    console.log('====================================');
+  }
+}
 
+// Test function to verify cursor display is working
+function testCursorDisplay() {
+  console.log('Testing cursor display with sample text...');
+  
+  // Execute the VBScript with a simple test text
+  const { spawn } = require('child_process');
+  const vbsPath = path.join(__dirname, 'run-cursor.vbs');
+  
+  console.log('Executing VBScript with test text: TEST');
+  const vbsProcess = spawn('wscript.exe', ['//nologo', vbsPath, 'TEST'], {
+    cwd: __dirname,
+    detached: true,
+    stdio: ['ignore', 'ignore', 'ignore']
+  });
+  
+  vbsProcess.on('error', (err) => {
+    console.error('Failed to start test VBScript process:', err);
+  });
+  
+  vbsProcess.unref();
+  
+  console.log('Test sent to cursor display');
+}
 
 // Register global shortcuts
 function registerGlobalShortcuts() {
-  // Register shortcut for capture and automatic typing
-  const ret1 = globalShortcut.register('Control+Shift+P', captureAndType);
+  // Try to register shortcut for capture and automatic typing
+  let ret1 = globalShortcut.register('Control+Shift+P', captureAndType);
   
-  // Register shortcut for capture and display without auto-typing
-  const ret2 = globalShortcut.register('Control+Shift+R', captureAndDisplay);
+  // If failed, try alternative
+  if (!ret1) {
+    console.log('Trying alternative shortcut for capture and type...');
+    ret1 = globalShortcut.register('Control+Alt+P', captureAndType);
+  }
+  
+  // Try to register shortcut for capture and display without auto-typing
+  let ret2 = globalShortcut.register('Control+Shift+R', captureAndDisplay);
+  
+  // If failed, try alternative
+  if (!ret2) {
+    console.log('Trying alternative shortcut for capture and display...');
+    ret2 = globalShortcut.register('Control+Alt+R', captureAndDisplay);
+  }
+  
+  // Try to register shortcut for capture and Gemini API processing with cursor display
+  let ret3 = globalShortcut.register('Control+Shift+Y', captureAndDisplayWithGemini);
+  
+  // If failed, try alternative
+  if (!ret3) {
+    console.log('Trying alternative shortcut for capture and Gemini display...');
+    ret3 = globalShortcut.register('Control+Alt+Y', captureAndDisplayWithGemini);
+  }
   
   if (!ret1) {
-    console.log('Failed to register global shortcut for capture and type');
+    console.log('Failed to register global shortcut for capture and type (both default and alternative)');
   }
   
   if (!ret2) {
-    console.log('Failed to register global shortcut for capture and display');
+    console.log('Failed to register global shortcut for capture and display (both default and alternative)');
+  }
+  
+  if (!ret3) {
+    console.log('Failed to register global shortcut for capture and Gemini display (both default and alternative)');
   }
   
   console.log('Global shortcuts registered:');
-  console.log('- Control+Shift+P:', globalShortcut.isRegistered('Control+Shift+P'));
-  console.log('- Control+Shift+R:', globalShortcut.isRegistered('Control+Shift+R'));
+  console.log('- Control+Shift+P/Alt+P:', globalShortcut.isRegistered('Control+Shift+P') || globalShortcut.isRegistered('Control+Alt+P'));
+  console.log('- Control+Shift+R/Alt+R:', globalShortcut.isRegistered('Control+Shift+R') || globalShortcut.isRegistered('Control+Alt+R'));
+  console.log('- Control+Shift+Y/Alt+Y:', globalShortcut.isRegistered('Control+Shift+Y') || globalShortcut.isRegistered('Control+Alt+Y'));
 }
 
 // App lifecycle events
@@ -411,6 +605,10 @@ app.on('will-quit', () => {
   // Unregister the global shortcuts
   globalShortcut.unregister('Control+Shift+P');
   globalShortcut.unregister('Control+Shift+R');
+  globalShortcut.unregister('Control+Shift+Y');
+  globalShortcut.unregister('Control+Alt+P');
+  globalShortcut.unregister('Control+Alt+R');
+  globalShortcut.unregister('Control+Alt+Y');
   globalShortcut.unregisterAll();
   
   // Stop any ongoing typing processes
