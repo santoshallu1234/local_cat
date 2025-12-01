@@ -21,6 +21,87 @@ $letterWidth = 100
 $letterHeight = 150
 $spacing = 20
 
+function Move-MouseDirection {
+    param(
+        [ValidateSet(
+            "Up","Down","Left","Right",
+            "UpRight","UpLeft","DownRight","DownLeft"
+        )]
+        [string]$Direction,
+
+        [int]$pixels = 150,          # distance
+        [int]$durationMs = 500,      # animation time
+        [int]$steps = 40,            # smooth steps
+        [double]$maxJitter = 2.0     # human-like jitter
+    )
+
+    # current position
+    $start = [System.Windows.Forms.Cursor]::Position
+    $startX = $start.X
+    $startY = $start.Y
+
+    # basic deltas
+    $dx = 0
+    $dy = 0
+
+    switch ($Direction) {
+        "Up"        { $dx = 0;        $dy = -$pixels }
+        "Down"      { $dx = 0;        $dy =  $pixels }
+        "Left"      { $dx = -$pixels; $dy = 0 }
+        "Right"     { $dx =  $pixels; $dy = 0 }
+
+        "UpRight"   { $dx =  $pixels; $dy = -$pixels }
+        "UpLeft"    { $dx = -$pixels; $dy = -$pixels }
+        "DownRight" { $dx =  $pixels; $dy =  $pixels }
+        "DownLeft"  { $dx = -$pixels; $dy =  $pixels }
+    }
+
+    $destX = $startX + $dx
+    $destY = $startY + $dy
+
+    # clamp to monitor bounds
+    $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $destX = [math]::Min([math]::Max($destX, 0), $screen.Width - 1)
+    $destY = [math]::Min([math]::Max($destY, 0), $screen.Height - 1)
+
+    # easing function
+    function Ease([double]$t) {
+        if ($t -lt 0.5) { return 4 * $t * $t * $t }
+        $t2 = (2 * $t) - 2
+        return 0.5 * ($t2 * $t2 * $t2 + 2)
+    }
+
+    $rand = [System.Random]::new()
+    $baseSleep = [math]::Max(1, [int]($durationMs / $steps))
+
+    for ($i = 1; $i -le $steps; $i++) {
+        $t = $i / $steps
+        $e = Ease $t
+
+        # interpolate smoothly
+        $x = $startX + ($destX - $startX) * $e
+        $y = $startY + ($destY - $startY) * $e
+
+        # jitter
+        $j = 1 - $e
+        $jx = (($rand.NextDouble()*2)-1) * $maxJitter * $j
+        $jy = (($rand.NextDouble()*2)-1) * $maxJitter * $j
+
+        $finalX = [int][math]::Round($x + $jx)
+        $finalY = [int][math]::Round($y + $jy)
+
+        # apply
+        [System.Windows.Forms.Cursor]::Position =
+            [System.Drawing.Point]::new($finalX, $finalY)
+
+        Start-Sleep -Milliseconds $baseSleep
+    }
+
+    # final placement
+    [System.Windows.Forms.Cursor]::Position =
+        [System.Drawing.Point]::new($destX, $destY)
+}
+
 # Function to move cursor between two points
 function Move-CursorLine {
     param(
@@ -41,81 +122,29 @@ function Move-CursorLine {
 
 # Function to draw letter A (modified to move upward)
 function Draw-LetterA {
-    param([int]$offsetX, [int]$offsetY)
-    $leftX = $offsetX
-    $rightX = $offsetX + $letterWidth
-    $topY = $offsetY
-    $bottomY = $offsetY + $letterHeight
-    $middleY = $offsetY + ($letterHeight / 2)
-    $centerX = $offsetX + ($letterWidth / 2)
-    
-    # Move upward instead of drawing the letter A
-    # Start from bottom and move to top
-    Move-CursorLine -startX $centerX -startY $bottomY -endX $centerX -endY $topY -steps 20
+  Move-MouseDirection -Direction UpRight -pixels 50
 }
 
 # Function to draw letter B (modified to move downward)
 function Draw-LetterB {
-    param([int]$offsetX, [int]$offsetY)
-    $leftX = $offsetX
-    $rightX = $offsetX + $letterWidth
-    $topY = $offsetY
-    $bottomY = $offsetY + $letterHeight
-    $middleY = $offsetY + ($letterHeight / 2)
-    $centerX = $offsetX + ($letterWidth / 2)
-    
-    # Move downward instead of drawing the letter B
-    # Start from top and move to bottom
-    Move-CursorLine -startX $centerX -startY $topY -endX $centerX -endY $bottomY -steps 20
+Move-MouseDirection -Direction UpLeft -pixels 50
 }
 
 # Function to draw letter C (modified to move leftward)
 function Draw-LetterC {
-    param([int]$offsetX, [int]$offsetY)
-    $leftX = $offsetX
-    $rightX = $offsetX + $letterWidth
-    $topY = $offsetY
-    $bottomY = $offsetY + $letterHeight
-    $middleY = $offsetY + ($letterHeight / 2)
-    $centerY = $offsetY + ($letterHeight / 2)
-    
-    # Move leftward instead of drawing the letter C
-    # Start from right and move to left
-    Move-CursorLine -startX $rightX -startY $centerY -endX $leftX -endY $centerY -steps 20
+Move-MouseDirection -Direction DownLeft -pixels 50
+
 }
 
 # Function to draw letter D (modified to move rightward)
 function Draw-LetterD {
-    param([int]$offsetX, [int]$offsetY)
-    $leftX = $offsetX
-    $rightX = $offsetX + $letterWidth
-    $topY = $offsetY
-    $bottomY = $offsetY + $letterHeight
-    $middleY = $offsetY + ($letterHeight / 2)
-    $centerY = $offsetY + ($letterHeight / 2)
-    
-    # Move rightward instead of drawing the letter D
-    # Start from left and move to right
-    Move-CursorLine -startX $leftX -startY $centerY -endX $rightX -endY $centerY -steps 20
+Move-MouseDirection -Direction DownRight -pixels 50
+
 }
 
 # Function to draw letter E
 function Draw-LetterE {
-    param([int]$offsetX, [int]$offsetY)
-    $leftX = $offsetX
-    $rightX = $offsetX + $letterWidth
-    $topY = $offsetY
-    $bottomY = $offsetY + $letterHeight
-    $middleY = $offsetY + ($letterHeight / 2)
-    
-    # Top horizontal line
-    Move-CursorLine -startX $leftX -startY $topY -endX $rightX -endY $topY -steps 10
-    # Left vertical line
-    Move-CursorLine -startX $leftX -startY $topY -endX $leftX -endY $bottomY -steps 15
-    # Middle horizontal line
-    Move-CursorLine -startX $leftX -startY $middleY -endX $rightX -endY $middleY -steps 10
-    # Bottom horizontal line
-    Move-CursorLine -startX $leftX -startY $bottomY -endX $rightX -endY $bottomY -steps 10
+Move-MouseDirection -Direction Up -pixels 50
 }
 
 # Function to draw letter F
@@ -745,13 +774,12 @@ $startX = $centerX - ($totalWidth / 2)
 $startY = $centerY - ($letterHeight / 2)
 
 # Set initial cursor position
-[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point([int]$startX, [int]$startY)
 
 # Small delay to show starting position
 Start-Sleep -Milliseconds 100
 
-# Draw each letter in the text twice
-for ($iteration = 0; $iteration -lt 2; $iteration++) {
+# Draw each letter in the text once
+for ($iteration = 0; $iteration -lt 1; $iteration++) {
     # Draw each letter in the text
     for ($i = 0; $i -lt $Text.Length; $i++) {
         $char = $Text[$i]
@@ -761,14 +789,7 @@ for ($iteration = 0; $iteration -lt 2; $iteration++) {
         # Small pause between letters
         Start-Sleep -Milliseconds 50
     }
-    
-    # Small pause between iterations
-    if ($iteration -lt 1) {  # Don't pause after the last iteration
-        Start-Sleep -Milliseconds 200
-    }
 }
 
-# Return cursor to center
-[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point([int]$centerX, [int]$centerY)
 
 Write-Host "2 iterations completed. Cursor movement finished."
