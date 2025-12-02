@@ -52,7 +52,7 @@ try {
 async function getModelForToken(token) {
   // If no token is provided, use the default llama model
   if (!token) {
-    return "llama-3.3-70b-versatile";
+    return "qwen/qwen3-32b";
   }
   
   if (useRedis && redisClient) {
