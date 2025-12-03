@@ -23,40 +23,52 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Get response from URL parameter
+  // Get popup ID from URL parameter
   const urlParams = new URLSearchParams(window.location.search);
-  const responseText = urlParams.get('response');
+  const popupId = urlParams.get('popupId');
   
-  if (responseText !== null) { // Check for null instead of falsy to handle empty strings
-    // Display the response text
-    if (extractedTextDiv) {
-      const decodedText = decodeURIComponent(responseText);
-      console.log('Displaying response from URL parameter:', decodedText);
-      
-      // Check if the decoded text is empty or just whitespace
-      if (decodedText.trim() === '') {
-        extractedTextDiv.textContent = 'Processing complete but no content found';
+  if (popupId) {
+    // Retrieve response from storage using popup ID
+    const storageKey = 'popup_response_' + popupId;
+    chrome.storage.local.get([storageKey], function(result) {
+      if (result[storageKey] !== undefined) {
+        const responseText = result[storageKey];
+        // Display the response text
+        if (extractedTextDiv) {
+          console.log('Displaying response from storage:', responseText);
+          
+          // Check if the response text is empty or just whitespace
+          if (responseText.trim() === '') {
+            extractedTextDiv.textContent = 'Processing complete but no content found';
+          } else {
+            extractedTextDiv.textContent = responseText;
+          }
+          
+          // Scroll to top left to ensure both vertical and horizontal scroll positions are reset
+          extractedTextDiv.scrollTop = 0;
+          extractedTextDiv.scrollLeft = 0;
+        }
+        
+        // Show copy status as information only
+        if (copyStatusDiv) {
+          copyStatusDiv.textContent = 'Response displayed';
+          copyStatusDiv.style.display = 'block';
+          
+          // Hide copy status after 2 seconds
+          setTimeout(() => {
+            copyStatusDiv.style.display = 'none';
+          }, 2000);
+        }
+        
+        // Clean up storage after displaying
+        chrome.storage.local.remove(storageKey);
       } else {
-        extractedTextDiv.textContent = decodedText;
+        // If no response in storage, listen for server response
+        listenForServerResponse();
       }
-      
-      // Scroll to top left to ensure both vertical and horizontal scroll positions are reset
-      extractedTextDiv.scrollTop = 0;
-      extractedTextDiv.scrollLeft = 0;
-    }
-    
-    // Show copy status as information only
-    if (copyStatusDiv) {
-      copyStatusDiv.textContent = 'Response displayed';
-      copyStatusDiv.style.display = 'block';
-      
-      // Hide copy status after 2 seconds
-      setTimeout(() => {
-        copyStatusDiv.style.display = 'none';
-      }, 2000);
-    }
+    });
   } else {
-    // If no response parameter, listen for server response
+    // If no popup ID, listen for server response
     listenForServerResponse();
   }
 
@@ -97,26 +109,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Function to display response
   function displayResponse(response) {
-    console.log('Displaying response');
+    console.log('Displaying response:', response);
     let textToDisplay = '';
     
     // Prefer AI answers if available, otherwise use extracted text
     if (response.aiAnswers && response.aiAnswers !== 'No AI answers available') {
-      // Check if the response contains "No relevant questions found." but has more content after it
+      // Handle various cases of AI answers
       if (response.aiAnswers.startsWith('No relevant questions found.') && response.aiAnswers.length > 'No relevant questions found.'.length) {
         // Display the full response including the solution after "No relevant questions found."
         textToDisplay = response.aiAnswers;
       } else if (response.aiAnswers !== 'No relevant questions found.') {
         // Display the response if it doesn't start with "No relevant questions found."
         textToDisplay = response.aiAnswers;
+      } else if (response.extractedText) {
+        // If AI says no questions but we have extracted text, show that
+        textToDisplay = response.extractedText;
       } else {
-        // Only "No relevant questions found." - try extracted text
-        textToDisplay = response.extractedText || 'No relevant questions found.';
+        // Only "No relevant questions found." and no extracted text
+        textToDisplay = 'No relevant questions found in the image.';
       }
     } else if (response.extractedText) {
+      // No AI answers but we have extracted text
       textToDisplay = response.extractedText;
+    } else if (response.error) {
+      // Display error message
+      textToDisplay = 'Error: ' + response.error;
     } else {
-      textToDisplay = 'No content available';
+      // No content available
+      textToDisplay = 'Processing complete but no content found.';
+    }
+    
+    // Ensure we always have some text to display
+    if (!textToDisplay || textToDisplay.trim() === '') {
+      textToDisplay = 'Processing complete but no content found.';
     }
     
     // Display in the popup

@@ -1,5 +1,5 @@
 // Server URL - using the vercel endpoint
-const SERVER_URL = 'https://local-cat.vercel.app/solve-mcqs-base64';
+const SERVER_URL = 'http://localhost:3000/solve-mcqs-base64';
 
 // Variable to store the last extracted text and AI answers
 let lastExtractedText = '';
@@ -267,47 +267,53 @@ async function captureVisibleTab(tab, sendResponse) {
 function showResponseInPopup(responseText) {
   console.log('Showing response in popup:', responseText);
   
-  // Get display information to position the window in the left bottom corner
-  if (chrome.system && chrome.system.display) {
-    chrome.system.display.getInfo((displays) => {
-      if (chrome.runtime.lastError) {
-        console.error('Error getting display info:', chrome.runtime.lastError);
-        // Fallback to default positioning
-        createPopupWindow(responseText, null);
-        return;
-      }
-      
-      if (displays && displays.length > 0) {
-        const display = displays[0]; // Use the first display
-        const workArea = display.workArea;
+  // Store the response in chrome storage to avoid URL length limitations
+  const popupId = 'popup_' + Date.now();
+  const storageKey = 'popup_response_' + popupId;
+  
+  chrome.storage.local.set({[storageKey]: responseText}, () => {
+    // Get display information to position the window in the left bottom corner
+    if (chrome.system && chrome.system.display) {
+      chrome.system.display.getInfo((displays) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error getting display info:', chrome.runtime.lastError);
+          // Fallback to default positioning
+          createPopupWindow(popupId, null);
+          return;
+        }
         
-        // Position the window in the left bottom corner
-        const windowOptions = {
-          url: 'popup.html?response=' + encodeURIComponent(responseText),
-          type: 'popup',
-          width: 120, // Increased width for better content display
-          height: 80, // Increased height for better content display
-          left: workArea.left + 40, // 20 pixels from the left edge
-          top: workArea.top + workArea.height - 80, // Adjusted for new height
-          //focused: true
-        };
-        
-        createPopupWindow(responseText, windowOptions);
-      } else {
-        // Fallback to default positioning
-        createPopupWindow(responseText, null);
-      }
-    });
-  } else {
-    // Fallback to default positioning if chrome.system.display is not available
-    createPopupWindow(responseText, null);
-  }
+        if (displays && displays.length > 0) {
+          const display = displays[0]; // Use the first display
+          const workArea = display.workArea;
+          
+          // Position the window in the left bottom corner
+          const windowOptions = {
+            url: 'popup.html?popupId=' + popupId,
+            type: 'popup',
+            width: 120, // Increased width for better content display
+            height: 80, // Increased height for better content display
+            left: workArea.left + 40, // 20 pixels from the left edge
+            top: workArea.top + workArea.height - 80, // Adjusted for new height
+            //focused: true
+          };
+          
+          createPopupWindow(popupId, windowOptions);
+        } else {
+          // Fallback to default positioning
+          createPopupWindow(popupId, null);
+        }
+      });
+    } else {
+      // Fallback to default positioning if chrome.system.display is not available
+      createPopupWindow(popupId, null);
+    }
+  });
 }
 
 // Function to create the popup window
-function createPopupWindow(responseText, windowOptions) {
+function createPopupWindow(popupId, windowOptions) {
   const defaultOptions = {
-    url: 'popup.html?response=' + encodeURIComponent(responseText),
+    url: 'popup.html?popupId=' + popupId,
     type: 'popup',
     width: 120, // Increased width for better content display
     height: 80, // Increased height for better content display

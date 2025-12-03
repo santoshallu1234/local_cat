@@ -331,7 +331,7 @@ app.post('/solve-mcqs-base64', async (req, res) => {
     let aiAnswers = null;
     try {
       const response = await model.invoke([
-        ["system", "You are an AI assistant that finds MCQ questions, programming questions, or other academic questions in text and provides detailed answers. For programming questions, provide ONLY the code solution without any explanations or additional text. Format code to work with modern code editors that have smart indentation features - each new line should start at the appropriate indentation level. For MCQ questions, provide ONLY the answers in the format '1. A, 2. B, 3. C' without any explanations or theory. For other questions, provide concise and accurate answers. If no relevant questions are found, respond with 'No relevant questions found.'"],
+        ["system", "You are an AI assistant that finds MCQ questions, programming questions, or other academic questions in text and provides detailed answers. For programming questions, provide ONLY the code solution without any explanations or additional text. Format code to work with modern code editors that have smart indentation features - each new line should start at the appropriate indentation level. For MCQ questions, provide ONLY the answers in the format '1. A answer , 2. B asnwer , 3. C  answer ' without any explanations or theory. For other questions, provide concise and accurate answers. If no relevant questions are found, respond with 'No relevant questions found.'"],
         ["user", text]
       ]);
       
@@ -347,9 +347,6 @@ app.post('/solve-mcqs-base64', async (req, res) => {
     const responseJson = {
       success: true,
       message: 'File saved and text extracted successfully',
-      fileId: filename,
-      filePath: filePath,
-      extractedText: text,
       aiAnswers: aiAnswers,
       modelUsed: modelName // Include model info in response
     };
@@ -365,6 +362,7 @@ app.post('/solve-mcqs-base64', async (req, res) => {
       fileId: filename,
       filePath: filePath
     });
+    console.log(responseJson)
     
     // Send the response
     res.json(responseJson);
