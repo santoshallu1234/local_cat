@@ -681,21 +681,7 @@ app.get('/logs.html', (req, res) => {
 });
 
 // Endpoint to download the localcat-windows.zip file
-app.get('/download/extension', (req, res) => {
-  const zipFilePath = path.join(__dirname, 'marketing', 'localcat-windows.zip');
-  
-  // Check if file exists
-  if (!fs.existsSync(zipFilePath)) {
-    return res.status(404).json({ error: 'File not found' });
-  }
-  
-  // Set headers for file download
-  res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', 'attachment; filename=localcat-windows.zip');
-  
-  // Send the file
-  res.sendFile(zipFilePath);
-});
+
 
 app.listen(port, () => {
   console.log(`MCQ Solver Server is running on port ${port}`);
