@@ -40,6 +40,7 @@ Desktop.ini
 dist/
 build/
 out/
+windows-app/dist/
 
 # Extension files
 *.crx
