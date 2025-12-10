@@ -439,11 +439,9 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
       });
     }
     
-    // Create Google Generative AI instance
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY);
-    
-    // Get the generative model (using a valid model name)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // Generate a unique filename
+    const filename = `screenshot-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
+    const filePath = path.join(uploadDir, filename);
     
     // If image is already a data URL, extract the base64 data
     // Otherwise, assume it's base64 data
@@ -454,29 +452,40 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
       base64Data = image;
     }
     
-    // Prepare contents for Gemini API
-    const contents = [
-      {
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: base64Data,
-        },
-      },
-      { text: "Find any MCQ questions in this image and provide the answers in the format '1. A, 2. B, 3. C 4. E' without any explanations or theory. If no MCQ questions are found, respond with 'No MCQ questions found.'" },
-    ];
+    // Save the image file
+    fs.writeFileSync(filePath, base64Data, "base64");
+    
+    // Extract text from the image using Tesseract.js
+    const worker = await createTesseractWorker();
+    const { data: { text } } = await worker.recognize(filePath);
+    await worker.terminate();
+    
+    // Determine model based on token
+    const modelName = await getModelForToken(token);
+    
+    // Create model instance (using ChatGPT model instead of Gemini)
+    const model = new ChatGroq({
+      model: modelName,
+      temperature: 0.5,
+      apiKey: process.env.GROQ_API_KEY,
+    });
     
     // Use AI to find and answer MCQ questions if any
     let aiAnswers = null;
     try {
-      console.log('Calling Gemini API...');
+      console.log('Calling ChatGPT API via Groq...');
       const aiCallStartTime = Date.now();
-      const result = await model.generateContent(contents);
-      const aiCallEndTime = Date.now();
-      console.log(`Gemini API call time: ${aiCallEndTime - aiCallStartTime}ms`);
       
-      const response = result.response;
-      if (response && response.text) {
-        aiAnswers = response.text();
+      const response = await model.invoke([
+        ["system", "Find any MCQ questions in this text and provide the answers in the format '1. A, 2. B, 3. C 4. E' without any explanations or theory. If no MCQ questions are found, respond with 'No MCQ questions found.'"],
+        ["user", text]
+      ]);
+      
+      const aiCallEndTime = Date.now();
+      console.log(`ChatGPT API call time: ${aiCallEndTime - aiCallStartTime}ms`);
+      
+      if (response && response.content) {
+        aiAnswers = response.content;
       }
     } catch (aiError) {
       console.error('AI processing error:', aiError);
@@ -488,16 +497,19 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
       success: true,
       message: 'Image processed successfully',
       aiAnswers: aiAnswers,
-      modelUsed: "gemini-2.5-flash"
+      modelUsed: modelName // Include model info in response
     };
     
-    console.log("Processed base64 image with Google Gemini AI");
+    console.log("Processed base64 image with ChatGPT model");
     console.log(aiAnswers);
     
     // Log token usage
     logTokenUsage(token, {
-      modelUsed: "gemini-2.5-flash",
-      aiAnswers: aiAnswers
+      modelUsed: modelName,
+      extractedText: text,
+      aiAnswers: aiAnswers,
+      fileId: filename,
+      filePath: filePath
     });
     
     const endpointEndTime = Date.now();
@@ -507,11 +519,19 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
     // Send the response
     res.json(responseJson);
     
+    // Delete the uploaded image file after sending the response
+    try {
+      fs.unlinkSync(filePath);
+      console.log('Deleted uploaded image file:', filePath);
+    } catch (deleteError) {
+      console.error('Error deleting image file:', deleteError);
+    }
+    
   } catch (error) {
-    console.error('Error processing base64 image with Gemini:', error);
+    console.error('Error processing base64 image with ChatGPT:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to process image with Gemini: ' + error.message
+      error: 'Failed to process image with ChatGPT: ' + error.message
     });
   }
 });

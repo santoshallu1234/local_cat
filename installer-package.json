@@ -1,0 +1,17 @@
+{
+  "name": "ai-auto-marker-installer",
+  "version": "1.0.0",
+  "description": "Installer package for AI Auto Marker Windows App",
+  "type": "commonjs",
+  "main": "build-installer.js",
+  "scripts": {
+    "build": "node build-installer.js"
+  },
+  "keywords": [
+    "installer",
+    "ai",
+    "mcq"
+  ],
+  "author": "AI Auto Marker Team",
+  "license": "MIT"
+}

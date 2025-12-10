@@ -1,6 +1,7 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
 const { captureAndProcess, captureAndProcessWithGemini } = require('./capture');
 
 // Import nut-js for keyboard automation
@@ -11,6 +12,8 @@ let tray = null;
 let lastAiAnswer = ''; // Store the last AI answer in memory
 let isTyping = false; // Flag to track if typing is in progress
 let stopTyping = false; // Flag to stop typing when backspace is pressed
+let storedAnswers = '';
+let answerIndex = 0;
 
 // Create the main application window
 function createWindow() {
@@ -85,6 +88,59 @@ function createPopupWindow() {
   });
   
   return popupWindow;
+}
+
+// Create setup dialog window for token input
+let setupWindow = null;
+function createSetupWindow() {
+  console.log('Creating setup window...');
+  
+  // Destroy existing setup window if it exists
+  if (setupWindow) {
+    setupWindow.destroy();
+  }
+  
+  // Create setup window
+  setupWindow = new BrowserWindow({
+    width: 500,
+    height: 650,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    resizable: false,
+    movable: true,
+    frame: true,
+    show: true,
+    transparent: false,
+    fullscreenable: false,
+    skipTaskbar: false,
+    alwaysOnTop: true
+  });
+  
+  console.log('Setup window created, loading setup-dialog.html...');
+
+  // Load the setup dialog HTML
+  setupWindow.loadFile('setup-dialog.html');
+  
+  // Show the window when it's ready
+  setupWindow.once('ready-to-show', () => {
+    console.log('Setup window ready to show, showing and focusing...');
+    setupWindow.show();
+    setupWindow.focus();
+  });
+  
+  // Handle window close
+  setupWindow.on('closed', () => {
+    console.log('Setup window closed');
+    setupWindow = null;
+  });
+  
+  setupWindow.webContents.on('did-finish-load', () => {
+    console.log('Setup window content loaded');
+  });
+  
+  return setupWindow;
 }
 
 // Create system tray icon
@@ -173,6 +229,14 @@ function saveToLocalStorage(key, data) {
     // Write back to file
     fs.writeFileSync(storagePath, JSON.stringify(storage, null, 2));
     console.log(`Data saved to localStorage-like storage with key: ${key}`);
+    
+    // Also save premium token to token.json file for easier access
+    if (key === 'premiumToken') {
+      const tokenPath = path.join(__dirname, 'token.json');
+      const tokenData = { token: data };
+      fs.writeFileSync(tokenPath, JSON.stringify(tokenData, null, 2));
+      console.log('Premium token also saved to token.json');
+    }
   } catch (error) {
     console.error('Error saving to localStorage-like storage:', error);
   }
@@ -362,22 +426,38 @@ async function captureAndDisplay() {
     
     // Handle result - copy to clipboard and save to file
     if (result.success) {
+      console.log('Capture result:', JSON.stringify(result, null, 2));
+            
       // Save results to file
       fs.writeFileSync('results.txt', result.text);
-      
+            
       // Copy to clipboard
       clipboard.writeText(result.text);
-      
+            
       // Store AI answer in our variable and localStorage-like storage
       if (result.aiAnswers && result.aiAnswers !== 'No AI answers available') {
         lastAiAnswer = result.aiAnswers;
-      } else {
+        // Store answers for Ctrl+Shift+I functionality
+        storedAnswers = result.aiAnswers.replace(/[^A-Za-z0-9]/g, ''); // Keep only alphanumeric characters
+        answerIndex = 0; // Reset index
+        console.log('Stored answers from aiAnswers:', storedAnswers);
+      } else if (result.extractedText) {
         lastAiAnswer = result.extractedText || '';
+        // Store answers for Ctrl+Shift+I functionality
+        storedAnswers = (result.extractedText || '').replace(/[^A-Za-z0-9]/g, ''); // Keep only alphanumeric characters
+        answerIndex = 0; // Reset index
+        console.log('Stored answers from extractedText:', storedAnswers);
+      } else {
+        // Fallback - store the main text
+        lastAiAnswer = result.text || '';
+        storedAnswers = (result.text || '').replace(/[^A-Za-z0-9]/g, ''); // Keep only alphanumeric characters
+        answerIndex = 0; // Reset index
+        console.log('Stored answers from text:', storedAnswers);
       }
-      
+            
       // Save to localStorage-like storage
       saveToLocalStorage('lastAiAnswer', lastAiAnswer);
-      
+            
       // Don't display popup - just log success
       console.log('Screen captured and sent to server successfully');
     } else {
@@ -418,6 +498,8 @@ async function captureAndDisplayWithGemini() {
     
     // Handle result - copy to clipboard and save to file
     if (result.success) {
+      console.log('Gemini capture result:', JSON.stringify(result, null, 2));
+      
       // Time file operations
       const fileOpStartTime = Date.now();
       
@@ -429,6 +511,10 @@ async function captureAndDisplayWithGemini() {
       
       // Store AI answer in our variable and localStorage-like storage
       lastAiAnswer = result.text;
+      // Store answers for Ctrl+Shift+I functionality
+      storedAnswers = result.text.replace(/[^A-Za-z0-9]/g, ''); // Keep only alphanumeric characters
+      answerIndex = 0; // Reset index
+      console.log('Stored answers from Gemini result:', storedAnswers);
       saveToLocalStorage('lastAiAnswer', lastAiAnswer);
       
       const fileOpEndTime = Date.now();
@@ -517,7 +603,96 @@ async function captureAndDisplayWithGemini() {
   }
 }
 
-// Test function to verify cursor display is working
+// Print next letter from stored answers
+function printNextLetter() {
+  console.log('Tab key pressed (Ctrl+Shift+I alternative)');
+  
+  try {
+    // Check if results.txt file exists
+    const fs = require('fs');
+    let textToType = '';
+    
+    if (fs.existsSync('results.txt')) {
+      // Read the latest results from results.txt file
+      const resultsText = fs.readFileSync('results.txt', 'utf8');
+      console.log('Results file content:', JSON.stringify(resultsText));
+      console.log('Results file length:', resultsText.length);
+      
+      // Use the file content if it's not an error message
+      if (!resultsText.startsWith('Error:') && resultsText.trim() !== 'No answer') {
+        textToType = resultsText;
+      }
+    }
+    
+    // If we don't have valid text from file, try to use clipboard content as fallback
+    if (!textToType || textToType.length === 0) {
+      try {
+        const clipboardText = clipboard.readText();
+        console.log('Clipboard content:', JSON.stringify(clipboardText));
+        if (clipboardText && clipboardText.trim().length > 0 && clipboardText.trim() !== 'No answer') {
+          textToType = clipboardText;
+          console.log('Using clipboard content as fallback');
+        }
+      } catch (clipboardError) {
+        console.error('Error reading clipboard:', clipboardError.message);
+      }
+    }
+    
+    // If we still don't have text, try to use the stored answers variable
+    if (!textToType || textToType.length === 0) {
+      if (storedAnswers && storedAnswers.length > 0) {
+        textToType = storedAnswers;
+        console.log('Using stored answers as fallback');
+      }
+    }
+    
+    console.log('Text to type:', JSON.stringify(textToType));
+    console.log('Text to type length:', textToType.length);
+    
+    // Check if we have text to type
+    if (!textToType || textToType.length === 0) {
+      console.log('No text available to type');
+      return;
+    }
+    
+    // Use the index from the global variable
+    console.log('Current answerIndex:', answerIndex);
+    
+    // Get the next character from text
+    if (answerIndex < textToType.length) {
+      const char = textToType[answerIndex];
+      console.log(`Typing character: ${JSON.stringify(char)}`);
+      
+      // Type the character using nut-js
+      keyboard.type(char);
+      
+      // Move to next character
+      answerIndex++;
+      
+      // Reset to beginning if we've reached the end
+      if (answerIndex >= textToType.length) {
+        answerIndex = 0;
+      }
+    } else {
+      // Reset to beginning if we've reached the end
+      answerIndex = 0;
+      if (textToType.length > 0) {
+        const char = textToType[answerIndex];
+        console.log(`Typing character: ${JSON.stringify(char)}`);
+        keyboard.type(char);
+        answerIndex++;
+      }
+    }
+    
+    console.log('Updated answerIndex:', answerIndex);
+  } catch (error) {
+    console.error('Error in printNextLetter:', error.message);
+    console.error('Stack trace:', error.stack);
+  }
+}
+
+// Show a notification with the character to avoid triggering browser shortcuts
+
 function testCursorDisplay() {
   console.log('Testing cursor display with sample text...');
   
@@ -570,6 +745,15 @@ function registerGlobalShortcuts() {
     ret3 = globalShortcut.register('Control+Alt+Y', captureAndDisplayWithGemini);
   }
   
+  // Try to register Tab key for printing next letter from stored answers
+  let ret4 = globalShortcut.register('Tab', printNextLetter);
+  
+  // If failed, try alternative
+  if (!ret4) {
+    console.log('Trying alternative shortcut for printing next letter...');
+    ret4 = globalShortcut.register('Control+Shift+I', printNextLetter);
+  }
+  
   if (!ret1) {
     console.log('Failed to register global shortcut for capture and type (both default and alternative)');
   }
@@ -582,17 +766,24 @@ function registerGlobalShortcuts() {
     console.log('Failed to register global shortcut for capture and Gemini display (both default and alternative)');
   }
   
+  if (!ret4) {
+    console.log('Failed to register global shortcut for printing next letter (both Tab and Ctrl+Shift+I)');
+  }
+  
   console.log('Global shortcuts registered:');
   console.log('- Control+Shift+P/Alt+P:', globalShortcut.isRegistered('Control+Shift+P') || globalShortcut.isRegistered('Control+Alt+P'));
   console.log('- Control+Shift+R/Alt+R:', globalShortcut.isRegistered('Control+Shift+R') || globalShortcut.isRegistered('Control+Alt+R'));
   console.log('- Control+Shift+Y/Alt+Y:', globalShortcut.isRegistered('Control+Shift+Y') || globalShortcut.isRegistered('Control+Alt+Y'));
+  console.log('- Tab/Alt+I:', globalShortcut.isRegistered('Tab') || globalShortcut.isRegistered('Control+Shift+I'));
 }
 
 // App lifecycle events
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow();
-  createTray();
-  registerGlobalShortcuts(); // Updated function name
+  
+  // Always show setup window at launch as per requirements
+  console.log('Creating setup window...');
+  createSetupWindow();
   
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -606,6 +797,8 @@ app.on('will-quit', () => {
   globalShortcut.unregister('Control+Shift+P');
   globalShortcut.unregister('Control+Shift+R');
   globalShortcut.unregister('Control+Shift+Y');
+  globalShortcut.unregister('Control+Shift+I');
+  globalShortcut.unregister('Tab');
   globalShortcut.unregister('Control+Alt+P');
   globalShortcut.unregister('Control+Alt+R');
   globalShortcut.unregister('Control+Alt+Y');
@@ -632,4 +825,56 @@ ipcMain.on('close-window', () => {
 ipcMain.on('copy-text', (event, text) => {
   // In a real implementation, we would copy to clipboard
   console.log('Copy text requested:', text);
+});
+
+// IPC handler for token validation
+ipcMain.handle('validate-token', async (event, token) => {
+  try {
+    const response = await axios.get(`https://local-cat.vercel.app/admin/token-model/${token}`);
+    
+    if (response.status === 200 && response.data && response.data.success) {
+      return { 
+        valid: true, 
+        count: response.data.count, 
+        model: response.data.model 
+      };
+    } else {
+      return { valid: false };
+    }
+  } catch (error) {
+    console.error('Token validation error:', error);
+    return { valid: false, error: error.message };
+  }
+});
+
+// IPC handler for saving token
+ipcMain.on('save-token', (event, token) => {
+  try {
+    saveToLocalStorage('premiumToken', token);
+    event.reply('token-saved', { success: true });
+    
+    // Close setup window and initialize main app
+    if (setupWindow) {
+      setupWindow.close();
+      setupWindow = null;
+    }
+    
+    // Create tray and register shortcuts
+    createTray();
+    registerGlobalShortcuts();
+  } catch (error) {
+    console.error('Error saving token:', error);
+    event.reply('token-saved', { success: false, error: error.message });
+  }
+});
+
+// IPC handler for checking if token exists
+ipcMain.handle('check-token', async () => {
+  try {
+    const token = loadFromLocalStorage('premiumToken');
+    return { exists: !!token, token };
+  } catch (error) {
+    console.error('Error checking token:', error);
+    return { exists: false };
+  }
 });

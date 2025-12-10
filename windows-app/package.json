@@ -5,8 +5,9 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder",
-    "package": "electron-packager . \"AI Auto Marker\" --platform=win32 --arch=x64 --out=dist --overwrite"
+    "build": "electron-builder --win --x64",
+    "package": "electron-packager . \"AI Auto Marker\" --platform=win32 --arch=x64 --out=dist --overwrite",
+    "create-installer": "node create-installer.js"
   },
   "build": {
     "appId": "com.ai-auto-marker.app",
@@ -22,7 +23,9 @@
     "nsis": {
       "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   },
   "dependencies": {
@@ -33,6 +36,7 @@
   "devDependencies": {
     "electron": "^27.0.0",
     "electron-builder": "^24.0.0",
+    "electron-installer-windows": "^3.0.0",
     "electron-packager": "^17.1.2"
   },
   "keywords": [
