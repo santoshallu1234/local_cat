@@ -1,6 +1,41 @@
-# AI Auto Marker - Windows Application
+# AI Auto Marker Windows Application
 
-This is a Windows desktop application version of the AI Auto Marker Chrome extension. It captures screenshots of your screen, sends them to an AI server for processing, and displays the results.
+## Optimization Tips for Faster Distribution
+
+1. **Icon Optimization**: The current icon.png is 2.2MB which is quite large. Consider reducing it to 256x256 pixels or smaller for distribution.
+
+2. **Unused Files**: Remove unused PowerShell scripts and batch files:
+   - move-cursor2.ps1
+   - run-cursor-B.bat
+   - run-cursor-C.bat
+
+3. **Build Command**: Use the optimized packaging script:
+   ```
+   npm run package
+   ```
+
+4. **Alternative Distribution Methods**:
+   - Consider using a web-based version for lighter distribution
+   - Use an installer instead of distributing the raw folder
+   - Implement code splitting to reduce initial download size
+
+## Build Process
+
+To package the application for Windows:
+```
+npm run package
+```
+
+This will create a distributable package in the `dist` folder.
+
+## Installation
+
+Simply extract the package and run `ai-auto-marker.exe`.
+
+## Requirements
+
+- Windows 10 or later
+- No additional dependencies required
 
 ## Features
 
@@ -14,19 +49,6 @@ This is a Windows desktop application version of the AI Auto Marker Chrome exten
   - Console display option
 - System tray icon for quick access
 - **Automatic AI Answer Typing** - Type stored AI answers automatically with Ctrl+Shift+P
-
-## Installation
-
-1. Make sure you have Node.js installed on your system
-2. Navigate to the windows-app directory
-3. Install dependencies:
-   ```
-   npm install
-   ```
-4. Start the application:
-   ```
-   npm start
-   ```
 
 ## Usage
 

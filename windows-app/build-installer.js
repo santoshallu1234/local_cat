@@ -1,32 +1,27 @@
-const builder = require('electron-builder');
+const electronInstaller = require('electron-installer-windows');
+const path = require('path');
 
-// Disable code signing
-process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
-process.env.WIN_CSC_LINK = '';
-process.env.WIN_CSC_KEY_PASSWORD = '';
+async function buildInstaller() {
+  try {
+    const options = {
+      src: 'dist/AI Auto Marker-win32-x64',
+      dest: 'dist/installers',
+      authors: ['AI Auto Marker Team'],
+      exe: 'AI Auto Marker.exe',
+      description: 'AI Auto Marker Application',
+      version: '1.0.0',
+      title: 'AI Auto Marker',
+      // Simplified options to avoid icon issues
+      noMsi: true,
+      skipUpdateIcon: true
+    };
 
-builder.build({
-  config: {
-    appId: "com.ai-auto-marker.app",
-    productName: "AI Auto Marker",
-    directories: {
-      output: "dist"
-    },
-    win: {
-      target: "nsis",
-      sign: false,
-      verifyUpdateCodeSignature: false
-    },
-    nsis: {
-      oneClick: true,
-      perMachine: false,
-      allowToChangeInstallationDirectory: true,
-      createDesktopShortcut: true,
-      createStartMenuShortcut: true
-    }
+    console.log('Building Windows installer...');
+    await electronInstaller(options);
+    console.log('Successfully created Windows installer at:', path.join(__dirname, 'dist/installers'));
+  } catch (error) {
+    console.error('Error building installer:', error);
   }
-}).then(() => {
-  console.log("Installer built successfully!");
-}).catch((error) => {
-  console.error("Error building installer:", error);
-});
+}
+
+buildInstaller();

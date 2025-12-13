@@ -7,7 +7,8 @@
     "start": "electron .",
     "build": "electron-builder --win --x64",
     "package": "electron-packager . \"AI Auto Marker\" --platform=win32 --arch=x64 --out=dist --overwrite",
-    "create-installer": "node create-installer.js"
+    "create-installer": "node build-installer.js",
+    "package-and-install": "npm run package && npm run create-installer"
   },
   "build": {
     "appId": "com.ai-auto-marker.app",
