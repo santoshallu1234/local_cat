@@ -76,3 +76,62 @@ if (downloadBtn) {
 }
 
 // Remove old demo section animation since we're using the new scroll animation
+
+// Mobile menu toggle functionality
+const menuToggle = document.getElementById('menuToggle');
+const navMenu = document.getElementById('navMenu');
+const floatingMenuToggle = document.getElementById('floatingMenuToggle');
+
+// Function to toggle menu state
+function toggleMenu() {
+    if (menuToggle) menuToggle.classList.toggle('active');
+    if (navMenu) navMenu.classList.toggle('active');
+    if (floatingMenuToggle) floatingMenuToggle.classList.toggle('active');
+}
+
+// Function to close menu
+function closeMenu() {
+    if (menuToggle) menuToggle.classList.remove('active');
+    if (navMenu) navMenu.classList.remove('active');
+    if (floatingMenuToggle) floatingMenuToggle.classList.remove('active');
+}
+
+if (menuToggle && navMenu) {
+    menuToggle.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent event from bubbling to document
+        toggleMenu();
+    });
+    
+    // Close menu when clicking on a link
+    const navLinks = navMenu.querySelectorAll('a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            closeMenu();
+        });
+    });
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', function(event) {
+        // Check if the clicked element is inside the nav or toggle button
+        const isClickInsideNav = navMenu.contains(event.target);
+        const isClickInsideToggle = menuToggle.contains(event.target);
+        
+        // If the click is outside both the nav and toggle button, and the nav is active
+        if (!isClickInsideNav && !isClickInsideToggle && navMenu.classList.contains('active')) {
+            closeMenu();
+        }
+    });
+    
+    // Prevent clicks inside the nav from closing it
+    navMenu.addEventListener('click', function(event) {
+        event.stopPropagation();
+    });
+}
+
+// Floating menu toggle functionality
+if (floatingMenuToggle) {
+    floatingMenuToggle.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent event from bubbling to document
+        toggleMenu();
+    });
+}

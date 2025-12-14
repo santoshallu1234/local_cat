@@ -13,7 +13,12 @@
             <div class="logo">
                 <img src="./icon.png" alt="AI Auto Marker Logo" width="30" height="40">
             </div>
-            <nav>
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <nav id="navMenu">
                 <ul>
                     <li><a href="/features.html">Features</a></li>
                     <li><a href="/faq.html">FAQ</a></li>
@@ -25,6 +30,13 @@
             </nav>
         </div>
     </header>
+
+    <!-- Floating menu toggle button for mobile -->
+    <div class="floating-menu-toggle" id="floatingMenuToggle">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
 
     <section class="hero">
         <iframe id="heroBackgroundVideo"
@@ -89,7 +101,6 @@
         </div>
     </section>
     
-
 
     <section class="setup-guide">
         <div class="container">
@@ -158,8 +169,6 @@
         </div>
     </section>
     
-   
-
 
     <section id="how-it-works" class="how-it-works">
         <div class="container">
@@ -348,6 +357,21 @@
             const leftPanel = document.querySelector('.hero-content-left');
             if (leftPanel) {
                 leftPanel.style.animationName = 'slideInFromTop';
+            }
+        });
+        
+        // Floating menu toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const floatingMenuToggle = document.getElementById('floatingMenuToggle');
+            const navMenu = document.getElementById('navMenu');
+            const menuToggle = document.getElementById('menuToggle');
+            
+            if (floatingMenuToggle && navMenu && menuToggle) {
+                floatingMenuToggle.addEventListener('click', function() {
+                    floatingMenuToggle.classList.toggle('active');
+                    menuToggle.classList.toggle('active');
+                    navMenu.classList.toggle('active');
+                });
             }
         });
     </script>

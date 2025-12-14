@@ -27,6 +27,13 @@
         </div>
     </header>
 
+    <!-- Floating menu toggle button for mobile -->
+    <div class="floating-menu-toggle" id="floatingMenuToggle">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
     <section class="hero">
         <div class="container">
             <div class="hero-content">
@@ -233,5 +240,18 @@
     </footer>
 
     <script src="script.js"></script>
+    <script>
+        // Floating menu toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const floatingMenuToggle = document.getElementById('floatingMenuToggle');
+            
+            if (floatingMenuToggle) {
+                floatingMenuToggle.addEventListener('click', function() {
+                    // Redirect to homepage with hash for menu
+                    window.location.href = '/#' + Math.random(); // Random hash to ensure page reload
+                });
+            }
+        });
+    </script>
 </body>
 </html>

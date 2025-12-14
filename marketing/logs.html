@@ -25,6 +25,13 @@
         </div>
     </header>
 
+    <!-- Floating menu toggle button for mobile -->
+    <div class="floating-menu-toggle" id="floatingMenuToggle">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
     <section class="logs-section">
         <div class="container">
             <h1>Premium Token Logs</h1>
@@ -75,5 +82,19 @@
     </footer>
 
     <script src="logs.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Floating menu toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const floatingMenuToggle = document.getElementById('floatingMenuToggle');
+            
+            if (floatingMenuToggle) {
+                floatingMenuToggle.addEventListener('click', function() {
+                    // Redirect to homepage with hash for menu
+                    window.location.href = '/#' + Math.random(); // Random hash to ensure page reload
+                });
+            }
+        });
+    </script>
 </body>
 </html>

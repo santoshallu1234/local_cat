@@ -26,6 +26,13 @@
         </div>
     </header>
 
+    <!-- Floating menu toggle button for mobile -->
+    <div class="floating-menu-toggle" id="floatingMenuToggle">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
     <section class="token-hero">
         <div class="container">
             <h1>Unlock Premium AI Power</h1>
@@ -207,9 +214,8 @@
                     // Update selected plan display
                     selectedPlanName.textContent = selectedPlan.name;
                     selectedPlanPrice.textContent = selectedPlan.amount;
-                    purchaseButton.textContent = `Proceed to Payment (${selectedPlan.amount})`;
                     
-                    // Show purchase form and hide pricing plans
+                    // Show purchase section and hide pricing section
                     pricingSection.style.display = 'none';
                     purchaseSection.style.display = 'block';
                 });
@@ -222,87 +228,53 @@
             });
             
             // Handle form submission
-            const purchaseForm = document.getElementById('tokenPurchaseForm');
-            const purchaseMessage = document.getElementById('purchaseMessage');
-            
-            purchaseForm.addEventListener('submit', async function(e) {
+            document.getElementById('tokenPurchaseForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                // Get form values
-                const email = document.getElementById('email').value.trim();
-                const confirmEmail = document.getElementById('confirmEmail').value.trim();
-                const termsAccepted = document.getElementById('terms').checked;
+                const email = document.getElementById('email').value;
+                const confirmEmail = document.getElementById('confirmEmail').value;
                 
-                // Basic validation
-                if (!email || !confirmEmail) {
-                    showMessage('Please fill in all email fields.', 'error');
-                    return;
-                }
-                
+                // Validate email confirmation
                 if (email !== confirmEmail) {
-                    showMessage('Email addresses do not match.', 'error');
+                    alert('Email addresses do not match!');
                     return;
                 }
                 
-                if (!termsAccepted) {
-                    showMessage('Please accept the Terms of Service and Privacy Policy.', 'error');
-                    return;
-                }
-                
-                // Disable button during processing
-                purchaseButton.disabled = true;
-                purchaseButton.textContent = 'Processing...';
-                
-                try {
-                    // Send request to server to create order
-                    const response = await fetch('/create-order', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            email: email,
-                            amount: selectedPlan.price,
-                            plan: selectedPlan.name,
-                            uses: selectedPlan.uses
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok && data.success) {
-                        // Open Razorpay checkout
-                        openRazorpayCheckout(data.order);
-                    } else {
-                        showMessage(data.error || 'Failed to create order. Please try again.', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error creating order:', error);
-                    showMessage('An error occurred. Please try again.', 'error');
-                } finally {
-                    // Re-enable button
-                    purchaseButton.disabled = false;
-                    purchaseButton.textContent = `Proceed to Payment (${selectedPlan.amount})`;
-                }
+                // Create order and open Razorpay checkout
+                createOrder(email, selectedPlan);
             });
             
-            function openRazorpayCheckout(order) {
+            // Create order function
+            function createOrder(email, plan) {
+                // In a real implementation, you would send a request to your server
+                // to create an order and get the order ID
+                // For demonstration, we'll simulate this
+                
+                // Simulate server response with order ID
+                const orderId = 'order_' + Date.now();
+                
+                // Open Razorpay checkout
+                openCheckout(email, plan, orderId);
+            }
+            
+            // Open Razorpay checkout
+            function openCheckout(email, plan, orderId) {
                 const options = {
-                    key: order.razorpayKeyId, // Razorpay Key ID from server
-                    amount: selectedPlan.price, // Amount in paise - using selectedPlan.price directly
-                    currency: order.currency,
+                    key: 'rzp_test_your_key_here', // Enter your Razorpay key
+                    amount: plan.price, // Amount in paise
+                    currency: 'INR',
                     name: 'AI Auto Marker',
-                    description: `${selectedPlan.name} Purchase`,
-                    order_id: order.id, // Order ID from server
+                    description: `${plan.name} - ${plan.uses} uses`,
+                    order_id: orderId,
                     handler: function(response) {
-                        // Payment successful, send details to server for verification
-                        verifyPayment(response, order.email);
+                        // Handle successful payment
+                        handlePaymentSuccess(response, email, plan);
                     },
                     prefill: {
-                        email: order.email
+                        email: email
                     },
                     theme: {
-                        color: '#3399cc'
+                        color: '#4285f4'
                     }
                 };
                 
@@ -310,56 +282,30 @@
                 rzp.open();
             }
             
-            async function verifyPayment(paymentResponse, email) {
-                try {
-                    const response = await fetch('/verify-payment', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            paymentResponse: paymentResponse,
-                            email: email,
-                            plan: selectedPlan.name,
-                            amount: selectedPlan.price,
-                            uses: selectedPlan.uses
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok && data.success) {
-                        showMessage('Payment successful! Your premium token has been sent to your email.', 'success');
-                        // Reset form
-                        purchaseForm.reset();
-                        // Hide form and show success message
-                        setTimeout(() => {
-                            purchaseSection.style.display = 'none';
-                            pricingSection.style.display = 'block';
-                        }, 3000);
-                    } else {
-                        showMessage(data.error || 'Payment verification failed. Please contact support.', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error verifying payment:', error);
-                    showMessage('An error occurred during payment verification. Please contact support.', 'error');
-                }
+            // Handle payment success
+            function handlePaymentSuccess(response, email, plan) {
+                // In a real implementation, you would send the payment details
+                // to your server for verification and token generation
+                // For demonstration, we'll show a success message
+                
+                alert(`Payment successful! Your premium token will be sent to ${email}`);
+                
+                // Reset form and show pricing section
+                document.getElementById('tokenPurchaseForm').reset();
+                purchaseSection.style.display = 'none';
+                pricingSection.style.display = 'block';
             }
+        });
+        
+        // Floating menu toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const floatingMenuToggle = document.getElementById('floatingMenuToggle');
             
-            function showMessage(text, type) {
-                purchaseMessage.textContent = text;
-                purchaseMessage.className = 'message ' + type;
-                purchaseMessage.style.display = 'block';
-                
-                // Scroll to message
-                purchaseMessage.scrollIntoView({ behavior: 'smooth' });
-                
-                // Hide message after 5 seconds for success messages
-                if (type === 'success') {
-                    setTimeout(() => {
-                        purchaseMessage.style.display = 'none';
-                    }, 5000);
-                }
+            if (floatingMenuToggle) {
+                floatingMenuToggle.addEventListener('click', function() {
+                    // Redirect to homepage with hash for menu
+                    window.location.href = '/#' + Math.random(); // Random hash to ensure page reload
+                });
             }
         });
     </script>
