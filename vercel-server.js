@@ -6,10 +6,76 @@ import { createWorker } from 'tesseract.js';
 import { ChatGroq } from "@langchain/groq";
 import { createClient } from 'redis';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
+import Razorpay from 'razorpay';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 // Load environment variables
 dotenv.config();
+
+// Initialize Razorpay
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+// Function to send email with premium token
+async function sendTokenEmail(email, token) {
+  try {
+    // Create transporter
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      host : 'smtp.gmail.com',
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    
+    // Define email content
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Your Premium Token for AI Auto Marker',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333; text-align: center;">AI Auto Marker Premium Token</h2>
+          
+          <p style="font-size: 16px; color: #555;">Thank you for purchasing a premium token for AI Auto Marker!</p>
+          
+          <div style="background-color: #f8f9fa; border: 2px dashed #007bff; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+            <p style="font-size: 18px; margin: 0 0 10px 0; color: #333;">Your Premium Token:</p>
+            <p style="font-size: 24px; font-weight: bold; color: #007bff; background-color: #e9ecef; padding: 15px; border-radius: 5px; letter-spacing: 2px;">${token}</p>
+          </div>
+          
+          <div style="background-color: #e8f4ff; border-left: 4px solid #007bff; padding: 15px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #007bff;">How to Use Your Token</h3>
+            <p style="margin-bottom: 5px;"><strong>1.</strong> Open the AI Auto Marker Chrome extension</p>
+            <p style="margin-bottom: 5px;"><strong>2.</strong> Go to Settings</p>
+            <p style="margin-bottom: 5px;"><strong>3.</strong> Paste your token in the Premium Token field</p>
+            <p style="margin-bottom: 0;"><strong>4.</strong> Save your settings and start using premium features!</p>
+          </div>
+          
+          <p style="font-size: 16px; color: #555;">Track your usage at: <a href="https://local-cat.vercel.app/logs.html" style="color: #007bff; text-decoration: none;">Token Logs Page</a></p>
+          
+          <p style="font-size: 16px; color: #555;">Have questions? Contact our support team anytime.</p>
+          
+          <br>
+          <p style="font-size: 16px; color: #333;"><strong>Best regards,</strong><br>
+          The AI Auto Marker Team</p>
+        </div>
+      `
+    };
+    
+    // Send email
+    await transporter.sendMail(mailOptions);
+    console.log('Token email sent successfully to:', email);
+  } catch (error) {
+    console.error('Error sending token email:', error);
+    throw error;
+  }
+}
 
 // Token-based model selection map (fallback when Redis is not available)
 // Structure: { token: { model: 'model-name', count: number } }
@@ -146,6 +212,125 @@ const createTesseractWorker = async () => {
     return await createWorker('eng');
   }
 };
+
+// Endpoint to create Razorpay order
+app.post('/create-order', async (req, res) => {
+  try {
+    const { email, amount, plan, uses } = req.body;
+    
+    if (!email || !amount) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Email and amount are required' 
+      });
+    }
+    
+    // Create order options
+    const options = {
+      amount: amount, // Amount in paise from request
+      currency: 'INR',
+      receipt: 'receipt_' + Date.now(),
+      notes: {
+        email: email,
+        plan: plan || 'Pro Plan',
+        uses: uses || 50
+      }
+    };
+    
+    // Create order
+    const order = await razorpay.orders.create(options);
+    
+    // Add Razorpay key ID to the response
+    order.razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+    order.email = email;
+    
+    res.json({ 
+      success: true, 
+      order: order
+    });
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to create order: ' + error.message
+    });
+  }
+});
+
+// Endpoint to verify payment
+app.post('/verify-payment', async (req, res) => {
+  try {
+    const { paymentResponse, email, plan, amount, uses } = req.body;
+    
+    if (!paymentResponse || !email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Payment response and email are required' 
+      });
+    }
+    
+    // Verify payment signature
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = paymentResponse;
+    
+    const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
+    hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
+    const generatedSignature = hmac.digest('hex');
+    
+    if (generatedSignature !== razorpay_signature) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Payment verification failed' 
+      });
+    }
+    
+    // Determine token count based on plan or uses parameter
+    let tokenCount = 50; // Default for Pro Plan
+    if (uses) {
+      tokenCount = uses;
+    } else if (plan === 'Premium Plan' || amount === 6900) {
+      tokenCount = 100;
+    } else if (plan === 'Pro Plan' || amount === 3900) {
+      tokenCount = 50;
+    }
+    
+    // Payment verified, create premium token
+    const token = 'premium_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+    const modelName = 'openai/gpt-oss-20b';
+    
+    if (useRedis && redisClient) {
+      // Store token data in Redis with ChatGPT model
+      await redisClient.set(token, JSON.stringify({ model: modelName, count: tokenCount }));
+    } else {
+      // Store token data in memory
+      tokenModelMap.set(token, { model: modelName, count: tokenCount });
+    }
+    
+    // Send email with token
+    try {
+      await sendTokenEmail(email, token);
+      
+      res.json({ 
+        success: true, 
+        message: 'Payment verified successfully. Your premium token has been sent to your email.',
+        token: token
+      });
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      // Still respond with success since payment was verified, but note email issue
+      res.json({ 
+        success: true, 
+        message: 'Payment verified successfully. However, there was an issue sending the email. Please contact support with your payment ID for your token.',
+        token: token
+      });
+    }
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to verify payment: ' + error.message
+    });
+  }
+});
 
 // Endpoint to handle base64 image data directly (no file system operations)
 app.post('/solve-mcqs-base64', async (req, res) => {

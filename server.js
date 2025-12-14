@@ -62,7 +62,7 @@ async function sendTokenEmail(email, token) {
             <p style="margin-bottom: 0;"><strong>4.</strong> Save your settings and start using premium features!</p>
           </div>
           
-          <p style="font-size: 16px; color: #555;">Track your usage at: <a href="${process.env.BASE_URL || 'http://localhost:3000'}/logs.html" style="color: #007bff; text-decoration: none;">Token Logs Page</a></p>
+          <p style="font-size: 16px; color: #555;">Track your usage at: <a href="https://local-cat.vercel.app/logs.html" style="color: #007bff; text-decoration: none;">Token Logs Page</a></p>
           
           <p style="font-size: 16px; color: #555;">Have questions? Contact our support team anytime.</p>
           
