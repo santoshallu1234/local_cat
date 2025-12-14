@@ -920,7 +920,6 @@ app.get('/buy-token', (req, res) => {
 
 // Endpoint to download the localcat-windows.zip file
 
-
 app.listen(port, () => {
   console.log(`MCQ Solver Server is running on port ${port}`);
   console.log(`Redis status: ${useRedis ? 'Connected' : 'Fallback to in-memory Map'}`);

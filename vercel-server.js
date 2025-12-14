@@ -718,6 +718,15 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'marketing', 'index.html'));
 });
 
+// Serve buy-token.html
+app.get('/buy-token', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'marketing', 'buy-token.html'));
+});
+
+// Serve logs.html
+app.get('/logs.html', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'marketing', 'logs.html'));
+});
 
 // Vercel serverless function handler
 export default (req, res) => {
