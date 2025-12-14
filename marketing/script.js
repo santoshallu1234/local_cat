@@ -61,8 +61,6 @@ window.addEventListener('scroll', function() {
     }
 });
 
-// Remove old observer code since we're using the new scroll animation
-
 // Download button animation
 const downloadBtn = document.querySelector('.download-btn');
 if (downloadBtn) {
@@ -74,8 +72,6 @@ if (downloadBtn) {
         this.style.transform = 'translateY(0)';
     });
 }
-
-// Remove old demo section animation since we're using the new scroll animation
 
 // Mobile menu toggle functionality
 const menuToggle = document.getElementById('menuToggle');
