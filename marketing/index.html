@@ -6,6 +6,168 @@
     <title>AI Auto Marker - Smart Chrome Extension for MCQ Solving</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="./icon.png" type="image/png">
+    <style>
+        /* Specific styles for index.html hero section to avoid conflicts */
+        .home-hero {
+            color: white;
+            position: relative;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            margin-top: 0;
+            padding-top: 80px;
+            background: #4285f4;
+        }
+        
+        .home-hero .hero-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .home-hero .hero-completion-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+            z-index: 3;
+            opacity: 0;
+            transition: opacity 1s ease;
+            transform: translateX(-100%);
+            transition: transform 1s ease, opacity 1s ease;
+            padding-top: 20vh;
+        }
+        
+        .home-hero .hero-completion-message.show {
+            transform: translateX(0);
+        }
+        
+        .home-hero .hero-download-section {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 40px 0;
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(100%);
+            transition: transform 1s ease;
+            z-index: 4;
+        }
+        
+        .home-hero .hero-download-section.show {
+            transform: translateY(0);
+        }
+        
+        .home-hero .download-content {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .home-hero .download-text h3 {
+            color: #333;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+        
+        .home-hero .download-text p {
+            color: #555;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+        
+        .home-hero .features-list {
+            list-style: none;
+            margin: 20px 0;
+        }
+        
+        .home-hero .features-list li {
+            margin: 10px 0;
+            font-size: 1.1rem;
+            color: #000;
+        }
+        
+        .home-hero .feature-highlight {
+            color: #34a853;
+            font-weight: bold;
+        }
+        
+        .home-hero .download-button {
+            text-align: center;
+        }
+        
+        .home-hero .flip-icon-container {
+            perspective: 1000px;
+        }
+        
+        .home-hero .flip-icon-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #4285f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        
+        .home-hero .flip-icon-circle:hover {
+            transform: rotateY(180deg);
+        }
+        
+        .home-hero .flip-icon {
+            width: 60px;
+            height: 60px;
+            transition: transform 0.6s;
+        }
+        
+        .home-hero .download-btn {
+            display: inline-block;
+            background-color: #34a853;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .home-hero .download-btn:hover {
+            background-color: #2d8a4a;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .home-hero .file-size {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .home-hero .download-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .home-hero .hero-download-section {
+                padding: 20px 0;
+            }
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -39,10 +201,8 @@
         <span></span>
     </div>
 
-    <section class="hero">
-        <div class="hero-background">
-            <!-- Video will be shown on desktop, hidden on mobile -->
-            <iframe id="heroBackgroundVideo" class="hero-video"
+    <section class="hero home-hero">
+        <iframe id="heroBackgroundVideo" class="hero-video"
                 src="https://player.cloudinary.com/embed/?cloud_name=dh6fd0law&public_id=mainv_t95p0m&profile=cld-default&autoplay=true&controls=false&muted=true&loop=true"
                 width="640" height="360" 
                 style="height: auto; width: 100%; aspect-ratio: 640 / 360;"
@@ -50,7 +210,14 @@
                 allowfullscreen
                 frameborder="0">
             </iframe>
+        <div class="hero-background">
+            <!-- Video will be shown on desktop, hidden on mobile 
+             
+             -->
+            
         </div>
+        
+       
         
         <!-- Animated content -->
         <div class="hero-completion-message">
@@ -336,10 +503,10 @@
                         if (downloadSection) {
                             downloadSection.classList.add('show');
                         }
-                    }, 1500);
-                }, 1500);
+                    }, 100);
+                }, 100);
             }
-        }, 5000); // 5 seconds (half of video duration)
+        }, 100); // 5 seconds (half of video duration)
     });
 </script>
 

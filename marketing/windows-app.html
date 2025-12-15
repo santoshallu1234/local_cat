@@ -6,6 +6,231 @@
     <title>Windows App - AI Auto Marker</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="./icon.png" type="image/png">
+    <style>
+        /* Specific styles for windows-app.html hero section to avoid conflicts */
+        .windows-hero {
+            color: #4285f4;
+            position: relative;
+            overflow: hidden;
+            height: 120vh;
+            display: flex;
+            align-items: center;
+            margin-top: 0;
+            padding-top: 80px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf9 100%);
+        }
+        
+        .windows-hero .hero-content {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .windows-hero .hero-content h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: fadeInUp 1s ease-out;
+        }
+        
+        .windows-hero .hero-content p {
+            font-size: 1.5rem;
+            animation: fadeInUp 1s ease-out 0.3s both;
+        }
+        
+        .windows-hero .hero-animation {
+            display: flex;
+            justify-content: center;
+            margin: 40px 0;
+            animation: fadeIn 1s ease-out 0.6s both;
+        }
+        
+        .windows-hero .laptop-demo {
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .windows-hero .laptop-screen {
+            background: #000;
+            border-radius: 10px 10px 0 0;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            position: relative;
+            height: 300px;
+            overflow: hidden;
+        }
+        
+        .windows-hero .question-display {
+            height: 100%;
+            position: relative;
+        }
+        
+        .windows-hero .mcq-question {
+            color: #fff;
+            padding: 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .windows-hero .question-text {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .windows-hero .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .windows-hero .option {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
+        .windows-hero .programming-question {
+            display: none;
+            color: #fff;
+            padding: 20px;
+            height: 100%;
+        }
+        
+        .windows-hero .code-block {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .windows-hero .code-line {
+            margin-bottom: 5px;
+        }
+        
+        .windows-hero .ai-solution {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+        }
+        
+        .windows-hero .solution-indicator {
+            animation: pulse 2s infinite;
+        }
+        
+        .windows-hero .cursor-move {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #34a853;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        
+        .windows-hero .laptop-base {
+            height: 20px;
+            background: #ddd;
+            border-radius: 0 0 10px 10px;
+            display: flex;
+            justify-content: center;
+            padding-top: 5px;
+        }
+        
+        .windows-hero .touchpad {
+            width: 40%;
+            height: 10px;
+            background: #ccc;
+            border-radius: 2px;
+        }
+        
+        .windows-hero .hero-features {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            animation: fadeInUp 1s ease-out 0.9s both;
+        }
+        
+        .windows-hero .feature-highlight {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .windows-hero .feature-icon {
+            font-size: 1.5rem;
+        }
+        
+        .windows-hero .feature-text {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(52, 168, 83, 0.7);
+            }
+            70% {
+                transform: scale(1.1);
+                box-shadow: 0 0 0 10px rgba(52, 168, 83, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(52, 168, 83, 0);
+            }
+        }
+        
+        /* Switch between MCQ and programming questions */
+        .windows-hero .mcq-question, .windows-hero .programming-question {
+            animation-duration: 0.5s;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .windows-hero .hero-content h1 {
+                font-size: 2rem;
+            }
+            
+            .windows-hero .hero-content p {
+                font-size: 1.2rem;
+            }
+            
+            .windows-hero .laptop-screen {
+                height: 250px;
+            }
+            
+            .windows-hero .question-text {
+                font-size: 1rem;
+            }
+            
+            .windows-hero .options {
+                grid-template-columns: 1fr;
+            }
+            
+            .windows-hero .hero-features {
+                gap: 15px;
+            }
+            
+            .windows-hero .feature-highlight {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -34,7 +259,7 @@
         <span></span>
     </div>
 
-    <section class="hero" >
+    <section class="hero windows-hero">
         <div class="container">
             <div class="hero-content">
                 <h1>AI Auto Marker for Windows</h1>
