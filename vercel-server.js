@@ -363,7 +363,7 @@ app.post('/solve-mcqs-base64', async (req, res) => {
             "content": [
               {
                 "type": "text",
-                "text": `Extract and return all text from the image as JSON in this format: {"extractedText": "all text from image", "questionFound": true/false, "question": "the question text if found", "options": ["option A text", "option B text", "option C text", "option D text"]}. Return only valid JSON, no other text.`
+                "text": `Extract and return all text from the image as JSON in this format: {"extractedText": "all text from image", "questionFound": true/false, "question": "the question text if found", "options": ["option A text", "option B text", "option C text", "option D text"], "isProgrammingQuestion": true/false, "programmingLanguage": "desired language of solution (default to python if not mentioned)", "isTechnicalQuestion": true/false}. Return only valid JSON, no other text.`
               },
 
               {
