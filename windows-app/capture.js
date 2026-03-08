@@ -5,10 +5,10 @@ const path = require('path');
 
 // Server URL - same as the Chrome extension
 //const SERVER_URL = 'https://local-cat.vercel.app/solve-mcqs-base64';
-const SERVER_URL = 'https://local-cat.vercel.app/solve-mcqs-base64';
+const SERVER_URL = 'http://localhost:3000/solve-mcqs-base64';
 
 // Server URL for Gemini API
-const GEMINI_SERVER_URL = 'https://local-cat.vercel.app/solve-mcqs-base64-Gemini';
+const GEMINI_SERVER_URL = 'http://localhost:3000/solve-mcqs-base64-Gemini';
 
 // Import Electron to access app data
 const { app } = require('electron');

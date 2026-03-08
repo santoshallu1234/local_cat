@@ -671,12 +671,13 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
             {
               type: "text",
               text: `
-Extract MCQ questions from this image.
+Extract the MCQ from the image.
 
-Return JSON only in this format:
+Return JSON ONLY in this format:
 
 {
  "question":"...",
+ "context":"any code, equation, or supporting text required to answer the question",
  "options":[
    {"label":"A","text":"..."},
    {"label":"B","text":"..."},
@@ -686,9 +687,11 @@ Return JSON only in this format:
 }
 
 Rules:
-- Detect options even if A/B/C/D not visible
-- If more than 4 options include all
+- Include full code if present
+- Include equations if present
+- Include any text needed to solve the question
 - Return valid JSON only
+
 `
             },
             {
@@ -705,21 +708,7 @@ Rules:
       max_tokens: 1000
     });
 
-    let extractedData = visionResponse.choices[0].message.content;
-
-    // Clean JSON
-    extractedData = extractedData.replace(/```json|```/g, "").trim();
-
-    let parsed;
-    try {
-      parsed = JSON.parse(extractedData);
-    } catch (err) {
-      return res.json({
-        success: false,
-        error: "Failed to parse extracted question",
-        raw: extractedData
-      });
-    }
+    const extractedData = visionResponse.choices[0].message.content;
 
     /*
     ==========================
@@ -730,6 +719,7 @@ Rules:
     const solverModel = new ChatGroq({
       model: modelName,
       temperature: 0,
+      top_p: 1,
       apiKey: process.env.GROQ_API_KEY
     });
 
@@ -737,26 +727,16 @@ Rules:
 Solve this MCQ.
 
 Question:
-${parsed.question}
+${extractedData}
 
-Options:
-${parsed.options.map(o => `${o.label}. ${o.text}`).join("\n")}
-
-Return ONLY the correct option label.
-
-Example outputs:
-A
-B
-C
-D
 `;
 
     const answer = await solverModel.invoke([
-      ["system", "You are an MCQ solving AI."],
+      ["system", "Find the correct answer for the MCQ and provide the answer in the format 'Label OptionText' without any explanations or theory. For example: 'A answer text'."],
       ["user", solverPrompt]
     ]);
 
-    const finalAnswer = answer.content.trim().toUpperCase();
+    const finalAnswer = answer.content.trim();
 
     /*
     ==========================
@@ -766,19 +746,19 @@ D
 
     const responseJson = {
       success: true,
-      question: parsed.question,
-      options: parsed.options,
+      question: extractedData,
       answer: finalAnswer,
+      aiAnswers: finalAnswer,
       cursor: `Cursor should select option ${finalAnswer}`,
       modelUsed: modelName
     };
 
-    console.log("Extracted:", parsed);
+    console.log("Extracted:", extractedData);
     console.log("Answer:", finalAnswer);
 
     logTokenUsage(token, {
       modelUsed: modelName,
-      extractedQuestion: parsed.question,
+      extractedQuestion: extractedData,
       aiAnswer: finalAnswer,
       fileId: "base64-upload"
     });
