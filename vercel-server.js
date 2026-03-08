@@ -2,7 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
-import { createWorker } from 'tesseract.js';
+import { Groq } from 'groq-sdk';
+import { ImageAnnotatorClient } from '@google-cloud/vision';
 import { ChatGroq } from "@langchain/groq";
 import { createClient } from 'redis';
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -12,6 +13,11 @@ import nodemailer from 'nodemailer';
 
 // Load environment variables
 dotenv.config();
+
+// Initialize Groq client
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
@@ -25,14 +31,14 @@ async function sendTokenEmail(email, token) {
     // Create transporter
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      host : 'smtp.gmail.com',
+      host: 'smtp.gmail.com',
       secure: true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
       }
     });
-    
+
     // Define email content
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -67,7 +73,7 @@ async function sendTokenEmail(email, token) {
         </div>
       `
     };
-    
+
     // Send email
     await transporter.sendMail(mailOptions);
     console.log('Token email sent successfully to:', email);
@@ -120,7 +126,7 @@ async function getModelForToken(token) {
   if (!token) {
     return "llama-3.3-70b-versatile";
   }
-  
+
   if (useRedis && redisClient) {
     try {
       const tokenData = await redisClient.get(token);
@@ -148,7 +154,7 @@ async function getModelForToken(token) {
       }
     }
   }
-  
+
   // If token is provided but not found or count is zero, use default llama model
   return "llama-3.3-70b-versatile";
 }
@@ -156,13 +162,13 @@ async function getModelForToken(token) {
 // Function to log token usage
 function logTokenUsage(token, logEntry) {
   if (!token) return;
-  
+
   // Add timestamp to log entry
   const logWithTimestamp = {
     ...logEntry,
     timestamp: new Date().toISOString()
   };
-  
+
   if (useRedis && redisClient) {
     // In a production environment, you might want to store logs in a separate Redis key
     // For now, we'll just keep them in memory
@@ -196,35 +202,20 @@ app.get('/', (req, res) => {
 app.use('/', express.static(path.join(process.cwd(), 'marketing')));
 app.use('/fonts', express.static(path.join(process.cwd(), 'fonts')));
 
-// Function to create Tesseract worker with environment-specific config
-const createTesseractWorker = async () => {
-  // For Vercel deployment, use simplified configuration
-  // For local development, use default configuration
-  const isVercel = !!process.env.VERCEL;
-  
-  if (isVercel) {
-    // Use minimal configuration for Vercel to avoid path issues
-    return await createWorker('eng', 1, {
-      cacheMethod: 'none',
-      workerBlobURL: false,
-    });
-  } else {
-    return await createWorker('eng');
-  }
-};
+
 
 // Endpoint to create Razorpay order
 app.post('/create-order', async (req, res) => {
   try {
     const { email, amount, plan, uses } = req.body;
-    
+
     if (!email || !amount) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Email and amount are required' 
+      return res.status(400).json({
+        success: false,
+        error: 'Email and amount are required'
       });
     }
-    
+
     // Create order options
     const options = {
       amount: amount, // Amount in paise from request
@@ -236,22 +227,22 @@ app.post('/create-order', async (req, res) => {
         uses: uses || 50
       }
     };
-    
+
     // Create order
     const order = await razorpay.orders.create(options);
-    
+
     // Add Razorpay key ID to the response
     order.razorpayKeyId = process.env.RAZORPAY_KEY_ID;
     order.email = email;
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       order: order
     });
   } catch (error) {
     console.error('Error creating order:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to create order: ' + error.message
     });
   }
@@ -261,28 +252,28 @@ app.post('/create-order', async (req, res) => {
 app.post('/verify-payment', async (req, res) => {
   try {
     const { paymentResponse, email, plan, amount, uses } = req.body;
-    
+
     if (!paymentResponse || !email) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Payment response and email are required' 
+      return res.status(400).json({
+        success: false,
+        error: 'Payment response and email are required'
       });
     }
-    
+
     // Verify payment signature
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = paymentResponse;
-    
+
     const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
     hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
     const generatedSignature = hmac.digest('hex');
-    
+
     if (generatedSignature !== razorpay_signature) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Payment verification failed' 
+      return res.status(400).json({
+        success: false,
+        error: 'Payment verification failed'
       });
     }
-    
+
     // Determine token count based on plan or uses parameter
     let tokenCount = 50; // Default for Pro Plan
     if (uses) {
@@ -292,11 +283,11 @@ app.post('/verify-payment', async (req, res) => {
     } else if (plan === 'Pro Plan' || amount === 3900) {
       tokenCount = 50;
     }
-    
+
     // Payment verified, create premium token
     const token = 'premium_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
     const modelName = 'openai/gpt-oss-20b';
-    
+
     if (useRedis && redisClient) {
       // Store token data in Redis with ChatGPT model
       await redisClient.set(token, JSON.stringify({ model: modelName, count: tokenCount }));
@@ -304,29 +295,29 @@ app.post('/verify-payment', async (req, res) => {
       // Store token data in memory
       tokenModelMap.set(token, { model: modelName, count: tokenCount });
     }
-    
+
     // Send email with token
     try {
       await sendTokenEmail(email, token);
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         message: 'Payment verified successfully. Your premium token has been sent to your email.',
         token: token
       });
     } catch (emailError) {
       console.error('Error sending email:', emailError);
       // Still respond with success since payment was verified, but note email issue
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: 'Payment verified successfully. However, there was an issue sending the email. Please contact support with your payment ID for your token.',
         token: token
       });
     }
   } catch (error) {
     console.error('Error verifying payment:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to verify payment: ' + error.message
     });
   }
@@ -336,27 +327,20 @@ app.post('/verify-payment', async (req, res) => {
 app.post('/solve-mcqs-base64', async (req, res) => {
   try {
     const { image } = req.body;
-    
+
     if (!image) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Image data is required' 
+      return res.status(400).json({
+        success: false,
+        error: 'Image data is required'
       });
     }
-    
+
     // Get token from premium-token header
     const token = req.headers['premium-token'];
-    
+
     // Determine model based on token
     const modelName = await getModelForToken(token);
-    
-    // Create model instance
-    const model = new ChatGroq({
-      model: modelName,
-      temperature: 0.7,
-      apiKey: process.env.GROQ_API_KEY, // Use environment variable only
-    });
-    
+
     // If image is already a data URL, extract the base64 data
     // Otherwise, assume it's base64 data
     let base64Data;
@@ -365,57 +349,91 @@ app.post('/solve-mcqs-base64', async (req, res) => {
     } else {
       base64Data = image;
     }
-    
-    // Convert base64 to buffer (no file saving needed)
-    const imageBuffer = Buffer.from(base64Data, 'base64');
-    
-    // Extract text from the image buffer using Tesseract.js
-    const worker = await createTesseractWorker();
-    
-    const { data: { text } } = await worker.recognize(imageBuffer);
-    await worker.terminate();
-    
-    // Use AI to find and answer MCQ questions if any
+
+    // Use Groq SDK for image processing directly
     let aiAnswers = null;
     try {
-      const response = await model.invoke([
-        ["system", "You are an AI assistant that finds MCQ questions, programming questions, or other academic interview questions in text and provides detailed answers. For programming questions, provide ONLY the code solution without any explanations or additional text. For MCQ questions, provide ONLY the answers  without any explanations or theory. For other questions, provide concise and accurate answers. If no relevant questions are found, respond with 'No relevant questions found.'"],
-        ["user", text]
-      ]);
-      
-      if (response && response.content) {
-        aiAnswers = response.content;
+      console.log('Calling Groq API with image processing...');
+      const aiCallStartTime = Date.now();
+
+      const chatCompletion = await groq.chat.completions.create({
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": `Extract and return all text from the image as JSON in this format: {"extractedText": "all text from image", "questionFound": true/false, "question": "the question text if found", "options": ["option A text", "option B text", "option C text", "option D text"]}. Return only valid JSON, no other text.`
+              },
+
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": `data:image/png;base64,${base64Data}`
+                }
+              }
+            ]
+          }
+        ],
+        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "temperature": 0,
+        "top_p": 1,
+        "stream": false,
+        "stop": null
+      });
+
+      const aiCallEndTime = Date.now();
+      console.log(`Groq API call time: ${aiCallEndTime - aiCallStartTime}ms`);
+
+      if (chatCompletion && chatCompletion.choices && chatCompletion.choices[0].message.content) {
+        aiAnswers = chatCompletion.choices[0].message.content;
       }
     } catch (aiError) {
       console.error('AI processing error:', aiError);
       aiAnswers = "AI processing failed: " + aiError.message;
     }
-    
+
+    const solverModel = new ChatGroq({
+      model: modelName,
+      temperature: 0,
+      top_p: 1,
+      apiKey: process.env.GROQ_API_KEY, // Use environment variable only
+    });
+
+    const finalans = await solverModel.invoke([
+      ["system", "Find any MCQ questions in this text and provide the answers in the format 'A answer ' without any explanations or theory. If no MCQ questions are found, respond with 'No MCQ questions found.'"],
+      ["user", aiAnswers]
+    ]);
+
     // Prepare the response
     const responseJson = {
       success: true,
-      message: 'Text extracted successfully from base64 image',
-      extractedText: text,
-      aiAnswers: aiAnswers,
+      message: 'Image processed successfully with Groq AI',
+      aiAnswers: finalans.content,
       modelUsed: modelName // Include model info in response
     };
-    
+
+    console.log(aiAnswers);
+    console.log("Processed base64 image with Groq image processing");
+    console.log(finalans.content);
+
     // Log token usage
     logTokenUsage(token, {
       modelUsed: modelName,
-      extractedText: text,
-      aiAnswers: aiAnswers
+      aiAnswers: finalans.content,
+      fileId: "base64-upload",
+      filePath: "in-memory"
     });
-    
+
     // Send the response
     res.json(responseJson);
-    
+
   } catch (error) {
     console.error('Error processing base64 image:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to process base64 image',
-      details: error.message 
+      details: error.message
     });
   }
 });
@@ -424,14 +442,14 @@ app.post('/solve-mcqs-base64', async (req, res) => {
 app.post('/admin/token-model', async (req, res) => {
   try {
     const { token, model, count } = req.body;
-    
+
     if (!token || !model || count === undefined) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Token, model, and count are required' 
+      return res.status(400).json({
+        success: false,
+        error: 'Token, model, and count are required'
       });
     }
-    
+
     if (useRedis && redisClient) {
       // Store token data in Redis
       await redisClient.set(token, JSON.stringify({ model, count: parseInt(count) }));
@@ -439,15 +457,15 @@ app.post('/admin/token-model', async (req, res) => {
       // Store token data in memory
       tokenModelMap.set(token, { model, count: parseInt(count) });
     }
-    
-    res.json({ 
-      success: true, 
-      message: 'Token model mapping updated successfully' 
+
+    res.json({
+      success: true,
+      message: 'Token model mapping updated successfully'
     });
   } catch (error) {
     console.error('Error updating token model mapping:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to update token model mapping: ' + error.message
     });
   }
@@ -457,16 +475,16 @@ app.post('/admin/token-model', async (req, res) => {
 app.post('/admin/add-premium-token', async (req, res) => {
   try {
     const { token, count } = req.body;
-    
+
     if (!token || count === undefined) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Token and count are required' 
+      return res.status(400).json({
+        success: false,
+        error: 'Token and count are required'
       });
     }
-    
+
     const model = "openai/gpt-oss-20b";
-    
+
     if (useRedis && redisClient) {
       // Store token data in Redis with ChatGPT model
       await redisClient.set(token, JSON.stringify({ model, count: parseInt(count) }));
@@ -474,9 +492,9 @@ app.post('/admin/add-premium-token', async (req, res) => {
       // Store token data in memory
       tokenModelMap.set(token, { model, count: parseInt(count) });
     }
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Premium token with ChatGPT model added successfully',
       token,
       model,
@@ -484,8 +502,8 @@ app.post('/admin/add-premium-token', async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding premium token:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to add premium token: ' + error.message
     });
   }
@@ -495,9 +513,9 @@ app.post('/admin/add-premium-token', async (req, res) => {
 app.get('/admin/token-model/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    
+
     let tokenData = null;
-    
+
     if (useRedis && redisClient) {
       // Retrieve token data from Redis
       tokenData = await redisClient.get(token);
@@ -507,26 +525,26 @@ app.get('/admin/token-model/:token', async (req, res) => {
         tokenData = JSON.stringify(tokenModelMap.get(token));
       }
     }
-    
+
     if (!tokenData) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Token not found' 
+      return res.status(404).json({
+        success: false,
+        error: 'Token not found'
       });
     }
-    
+
     const parsedData = useRedis ? JSON.parse(tokenData) : JSON.parse(tokenData);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       token,
       model: parsedData.model,
       count: parsedData.count
     });
   } catch (error) {
     console.error('Error retrieving token model mapping:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to retrieve token model mapping: ' + error.message
     });
   }
@@ -536,10 +554,10 @@ app.get('/admin/token-model/:token', async (req, res) => {
 app.get('/getlogs/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    
+
     // Validate token exists
     let tokenData = null;
-    
+
     if (useRedis && redisClient) {
       // Retrieve token data from Redis
       tokenData = await redisClient.get(token);
@@ -549,28 +567,28 @@ app.get('/getlogs/:token', async (req, res) => {
         tokenData = JSON.stringify(tokenModelMap.get(token));
       }
     }
-    
+
     if (!tokenData) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Token not found' 
+      return res.status(404).json({
+        success: false,
+        error: 'Token not found'
       });
     }
-    
+
     // Get logs for this token
     let logs = [];
     if (tokenLogs.has(token)) {
       logs = tokenLogs.get(token);
     }
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       logs: logs
     });
   } catch (error) {
     console.error('Error retrieving token logs:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to retrieve token logs: ' + error.message
     });
   }
@@ -580,31 +598,31 @@ app.get('/getlogs/:token', async (req, res) => {
 app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
   const endpointStartTime = Date.now();
   console.log('=== /solve-mcqs-base64-Gemini Endpoint Timing ===');
-  
+
   try {
     const { image } = req.body;
-    
+
     if (!image) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Image data is required' 
+      return res.status(400).json({
+        success: false,
+        error: 'Image data is required'
       });
     }
-    
+
     // Get token from premium-token header (required for this endpoint)
     const token = req.headers['premium-token'];
-    
+
     // Check if token is provided
     if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Premium token is required for this endpoint' 
+      return res.status(401).json({
+        success: false,
+        error: 'Premium token is required for this endpoint'
       });
     }
-    
+
     // Validate token exists and has remaining uses
     let tokenData = null;
-    
+
     if (useRedis && redisClient) {
       // Retrieve token data from Redis
       tokenData = await redisClient.get(token);
@@ -614,23 +632,23 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
         tokenData = JSON.stringify(tokenModelMap.get(token));
       }
     }
-    
+
     // If token not found or no remaining uses, deny access
     if (!tokenData) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid or expired premium token' 
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired premium token'
       });
     }
-    
+
     const parsedData = useRedis ? JSON.parse(tokenData) : JSON.parse(tokenData);
     if (parsedData.count <= 0) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Premium token has no remaining uses' 
+      return res.status(401).json({
+        success: false,
+        error: 'Premium token has no remaining uses'
       });
     }
-    
+
     // If image is already a data URL, extract the base64 data
     // Otherwise, assume it's base64 data
     let base64Data;
@@ -639,26 +657,33 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
     } else {
       base64Data = image;
     }
-    
-    // Convert base64 to buffer (no file saving needed)
-    const imageBuffer = Buffer.from(base64Data, 'base64');
-    
-    // Extract text from the image buffer using Tesseract.js
-    const worker = await createTesseractWorker();
-    
-    const { data: { text } } = await worker.recognize(imageBuffer);
-    await worker.terminate();
-    
+
+    // Extract text from the image using Google Cloud Vision API
+    const client = new ImageAnnotatorClient({
+      keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS || undefined,
+    });
+
+    // Perform text detection on the base64 image data directly
+    const [result] = await client.textDetection({
+      image: {
+        content: base64Data
+      }
+    });
+    const detections = result.textAnnotations;
+
+    // Extract the full text from the first annotation (which contains all the text)
+    const text = detections && detections.length > 0 ? detections[0].description : '';
+
     // Determine model based on token
     const modelName = await getModelForToken(token);
-    
+
     // Create model instance (using ChatGPT model instead of Gemini)
     const model = new ChatGroq({
       model: modelName,
       temperature: 0.5,
       apiKey: process.env.GROQ_API_KEY, // Use environment variable only
     });
-    
+
     // Use AI to find and answer MCQ questions if any
     let aiAnswers = null;
     try {
@@ -670,7 +695,7 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
       ]);
       const aiCallEndTime = Date.now();
       console.log(`ChatGPT API call time: ${aiCallEndTime - aiCallStartTime}ms`);
-      
+
       if (response && response.content) {
         aiAnswers = response.content;
       }
@@ -678,7 +703,7 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
       console.error('AI processing error:', aiError);
       aiAnswers = "AI processing failed: " + aiError.message;
     }
-    
+
     // Prepare the response
     const responseJson = {
       success: true,
@@ -686,28 +711,30 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
       aiAnswers: aiAnswers,
       modelUsed: modelName // Include model info in response
     };
-    
+
     console.log("Processed base64 image with ChatGPT model");
     console.log(aiAnswers);
-    
+
     // Log token usage
     logTokenUsage(token, {
       modelUsed: modelName,
       extractedText: text,
-      aiAnswers: aiAnswers
+      aiAnswers: aiAnswers,
+      fileId: "base64-upload",
+      filePath: "in-memory"
     });
-    
+
     const endpointEndTime = Date.now();
     console.log(`Total /solve-mcqs-base64-Gemini endpoint time: ${endpointEndTime - endpointStartTime}ms`);
     console.log('===================================================');
-    
+
     // Send the response
     res.json(responseJson);
-    
+
   } catch (error) {
     console.error('Error processing base64 image with ChatGPT:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to process image with ChatGPT: ' + error.message
     });
   }
@@ -734,13 +761,13 @@ export default (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, premium-token');
-  
+
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
-  
+
   // Pass the request to the express app
   return app(req, res);
 };
