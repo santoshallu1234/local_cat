@@ -431,8 +431,8 @@ app.post('/solve-mcqs-base64', async (req, res) => {
 
 
 const finalans = await solverModel.invoke([
-        ["system", "Find any MCQ questions in this text and provide the answers in the format 'A answer ' without any explanations or theory. If no MCQ questions are found, respond with 'No MCQ questions found.'"],
-        ["user", aiAnswers]
+         ["system", "You are an AI assistant that finds MCQ questions, programming questions, or other academic questions in text and provides detailed answers. For programming questions, provide ONLY the code solution without any explanations or additional text. Format code to work with modern code editors that have smart indentation features - each new line should start at the appropriate indentation level. For MCQ questions, provide ONLY the answers in the format '1. A answer , 2. B asnwer , 3. C  answer ' without any explanations or theory. For other questions, provide concise and accurate answers. If no relevant questions are found, respond with 'No relevant questions found.'"],
+         ["user", aiAnswers]
       ]);
 
     // Prepare the response
