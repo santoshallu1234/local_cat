@@ -597,7 +597,7 @@ app.get('/getlogs/:token', async (req, res) => {
 // New endpoint to handle base64 image data with Google Gemini AI
 app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
   const endpointStartTime = Date.now();
-  console.log('=== /solve-mcqs-base64-Gemini Endpoint Timing ===');
+  console.log('=== /solve-mcqs-base64-vision Endpoint ===');
 
   try {
     const { image } = req.body;
@@ -609,48 +609,43 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
       });
     }
 
-    // Get token from premium-token header (required for this endpoint)
     const token = req.headers['premium-token'];
 
-    // Check if token is provided
     if (!token) {
       return res.status(401).json({
         success: false,
-        error: 'Premium token is required for this endpoint'
+        error: 'Premium token required'
       });
     }
 
-    // Validate token exists and has remaining uses
+    // Validate token
     let tokenData = null;
 
     if (useRedis && redisClient) {
-      // Retrieve token data from Redis
       tokenData = await redisClient.get(token);
     } else {
-      // Retrieve token data from memory
       if (tokenModelMap.has(token)) {
         tokenData = JSON.stringify(tokenModelMap.get(token));
       }
     }
 
-    // If token not found or no remaining uses, deny access
     if (!tokenData) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid or expired premium token'
+        error: 'Invalid token'
       });
     }
 
-    const parsedData = useRedis ? JSON.parse(tokenData) : JSON.parse(tokenData);
+    const parsedData = JSON.parse(tokenData);
+
     if (parsedData.count <= 0) {
       return res.status(401).json({
         success: false,
-        error: 'Premium token has no remaining uses'
+        error: 'Token has no remaining uses'
       });
     }
 
-    // If image is already a data URL, extract the base64 data
-    // Otherwise, assume it's base64 data
+    // Extract base64
     let base64Data;
     if (image.startsWith('data:image')) {
       base64Data = image.split(',')[1];
@@ -658,88 +653,150 @@ app.post('/solve-mcqs-base64-Gemini', async (req, res) => {
       base64Data = image;
     }
 
-    // Extract text from the image using Google Cloud Vision API
-    const client = new ImageAnnotatorClient({
-      keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS || undefined,
-    });
-
-    // Perform text detection on the base64 image data directly
-    const [result] = await client.textDetection({
-      image: {
-        content: base64Data
-      }
-    });
-    const detections = result.textAnnotations;
-
-    // Extract the full text from the first annotation (which contains all the text)
-    const text = detections && detections.length > 0 ? detections[0].description : '';
-
-    // Determine model based on token
     const modelName = await getModelForToken(token);
 
-    // Create model instance (using ChatGPT model instead of Gemini)
-    const model = new ChatGroq({
-      model: modelName,
-      temperature: 0.5,
-      apiKey: process.env.GROQ_API_KEY, // Use environment variable only
+    /*
+    ==========================
+    STEP 1: IMAGE → TEXT (Llama Vision)
+    ==========================
+    */
+
+    console.log("Calling Llama Vision...");
+
+    const visionResponse = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `
+Extract MCQ questions from this image.
+
+Return JSON only in this format:
+
+{
+ "question":"...",
+ "options":[
+   {"label":"A","text":"..."},
+   {"label":"B","text":"..."},
+   {"label":"C","text":"..."},
+   {"label":"D","text":"..."}
+ ]
+}
+
+Rules:
+- Detect options even if A/B/C/D not visible
+- If more than 4 options include all
+- Return valid JSON only
+`
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/png;base64,${base64Data}`
+              }
+            }
+          ]
+        }
+      ],
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      temperature: 0,
+      max_tokens: 1000
     });
 
-    // Use AI to find and answer MCQ questions if any
-    let aiAnswers = null;
-    try {
-      console.log('Calling ChatGPT API via Groq...');
-      const aiCallStartTime = Date.now();
-      const response = await model.invoke([
-        ["system", "Find any MCQ questions in this text and provide the answers in the format '1. A, 2. B, 3. C 4. E' without any explanations or theory. If no MCQ questions are found, respond with 'No MCQ questions found.'"],
-        ["user", text]
-      ]);
-      const aiCallEndTime = Date.now();
-      console.log(`ChatGPT API call time: ${aiCallEndTime - aiCallStartTime}ms`);
+    let extractedData = visionResponse.choices[0].message.content;
 
-      if (response && response.content) {
-        aiAnswers = response.content;
-      }
-    } catch (aiError) {
-      console.error('AI processing error:', aiError);
-      aiAnswers = "AI processing failed: " + aiError.message;
+    // Clean JSON
+    extractedData = extractedData.replace(/```json|```/g, "").trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(extractedData);
+    } catch (err) {
+      return res.json({
+        success: false,
+        error: "Failed to parse extracted question",
+        raw: extractedData
+      });
     }
 
-    // Prepare the response
+    /*
+    ==========================
+    STEP 2: SOLVE QUESTION
+    ==========================
+    */
+
+    const solverModel = new ChatGroq({
+      model: modelName,
+      temperature: 0,
+      apiKey: process.env.GROQ_API_KEY
+    });
+
+    const solverPrompt = `
+Solve this MCQ.
+
+Question:
+${parsed.question}
+
+Options:
+${parsed.options.map(o => `${o.label}. ${o.text}`).join("\n")}
+
+Return ONLY the correct option label.
+
+Example outputs:
+A
+B
+C
+D
+`;
+
+    const answer = await solverModel.invoke([
+      ["system", "You are an MCQ solving AI."],
+      ["user", solverPrompt]
+    ]);
+
+    const finalAnswer = answer.content.trim().toUpperCase();
+
+    /*
+    ==========================
+    RESPONSE FORMAT
+    ==========================
+    */
+
     const responseJson = {
       success: true,
-      message: 'Image processed successfully',
-      aiAnswers: aiAnswers,
-      modelUsed: modelName // Include model info in response
+      question: parsed.question,
+      options: parsed.options,
+      answer: finalAnswer,
+      cursor: `Cursor should select option ${finalAnswer}`,
+      modelUsed: modelName
     };
 
-    console.log("Processed base64 image with ChatGPT model");
-    console.log(aiAnswers);
+    console.log("Extracted:", parsed);
+    console.log("Answer:", finalAnswer);
 
-    // Log token usage
     logTokenUsage(token, {
       modelUsed: modelName,
-      extractedText: text,
-      aiAnswers: aiAnswers,
-      fileId: "base64-upload",
-      filePath: "in-memory"
+      extractedQuestion: parsed.question,
+      aiAnswer: finalAnswer,
+      fileId: "base64-upload"
     });
 
     const endpointEndTime = Date.now();
-    console.log(`Total /solve-mcqs-base64-Gemini endpoint time: ${endpointEndTime - endpointStartTime}ms`);
-    console.log('===================================================');
+    console.log(`Total endpoint time: ${endpointEndTime - endpointStartTime}ms`);
 
-    // Send the response
     res.json(responseJson);
 
   } catch (error) {
-    console.error('Error processing base64 image with ChatGPT:', error);
+    console.error("Vision solver error:", error);
+
     res.status(500).json({
       success: false,
-      error: 'Failed to process image with ChatGPT: ' + error.message
+      error: error.message
     });
   }
 });
-
 // Serve index.html explicitly (moved before static middleware to ensure proper routing)
 app.get('/', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'marketing', 'index.html'));
