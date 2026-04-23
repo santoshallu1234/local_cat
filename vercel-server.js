@@ -787,6 +787,61 @@ app.get('/buy-token', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'marketing', 'buy-token.html'));
 });
 
+// Endpoint to handle simple questions from text
+app.post('/ask-question', async (req, res) => {
+  try {
+    const { question } = req.body;
+
+    if (!question) {
+      return res.status(400).json({
+        success: false,
+        error: 'Question is required'
+      });
+    }
+
+    const token = req.headers['premium-token'];
+    const modelName = await getModelForToken(token);
+
+    const solverModel = new ChatGroq({
+      model: modelName,
+      temperature: 0,
+      top_p: 1,
+      apiKey: process.env.GROQ_API_KEY,
+    });
+
+    const finalans = await solverModel.invoke([
+      ["system", "You are an AI assistant. Answer the provided question accurately and concisely."],
+      ["user", question]
+    ]);
+
+    const responseJson = {
+      success: true,
+      answer: finalans.content,
+      modelUsed: modelName
+    };
+
+    console.log("Processed textbook question");
+
+    // Log token usage
+    logTokenUsage(token, {
+      modelUsed: modelName,
+      question: question,
+      aiAnswer: finalans.content,
+      fileId: "text-question"
+    });
+
+    res.json(responseJson);
+
+  } catch (error) {
+    console.error('Error processing question:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process question',
+      details: error.message
+    });
+  }
+});
+
 // Serve logs.html
 app.get('/logs.html', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'marketing', 'logs.html'));

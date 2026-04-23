@@ -11,7 +11,7 @@ async function packageApp() {
       arch: 'x64',
       appCopyright: 'Copyright (C) 2025 AI Auto Marker Team',
       appVersion: '1.0.0',
-      name: 'AI Auto Marker',
+      name: 'Legal Cat ',
       executableName: 'ai-auto-marker',
       icon: path.join(__dirname, 'icon.png'),
       ignore: [
@@ -34,7 +34,7 @@ async function packageApp() {
         ProductName: 'AI Auto Marker'
       }
     });
-    
+
     console.log('App packaged successfully to:', appPaths);
   } catch (error) {
     console.error('Error packaging app:', error);
