@@ -451,7 +451,7 @@ app.post('/solveq', async (req, res) => {
     }
 
     const solverModel = new ChatGroq({
-      model: "llama3-70b-8192", // or any default model
+      model: "llama-3.3-70b-versatile", // or any default model
       temperature: 0,
       top_p: 1,
       apiKey: process.env.GROQ_API_KEY,
@@ -493,7 +493,7 @@ app.get('/solveq', async (req, res) => {
     }
 
     const solverModel = new ChatGroq({
-      model: "llama3-70b-8192",
+      model: "llama-3.3-70b-versatile",
       temperature: 0,
       top_p: 1,
       apiKey: process.env.GROQ_API_KEY,
